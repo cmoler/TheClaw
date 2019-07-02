@@ -8,7 +8,7 @@ public class Main {
               try { Thread.sleep(1000000); } catch (InterruptedException ie) {}
           }
         };
-
+        serialCommunication.serialEventOut(Stepper.BASE, 2);
         t.start();
         System.out.println("Started");
     }

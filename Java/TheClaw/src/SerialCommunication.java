@@ -1,4 +1,5 @@
 import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import gnu.io.CommPortIdentifier;
@@ -31,10 +32,6 @@ public class SerialCommunication implements SerialPortEventListener{
     private static final int DATA_RATE = 9600;
 
     public void initialize() {
-        // the next line is for Raspberry Pi and
-        // gets us into the while loop and was suggested here was suggested https://www.raspberrypi.org/phpBB3/viewtopic.php?f=81&t=32186
-        System.setProperty("gnu.io.rxtx.SerialPorts", "/dev/ttyACM0");
-
         CommPortIdentifier portId = null;
         Enumeration portEnum = CommPortIdentifier.getPortIdentifiers();
 
@@ -84,6 +81,18 @@ public class SerialCommunication implements SerialPortEventListener{
         if (serialPort != null) {
             serialPort.removeEventListener();
             serialPort.close();
+        }
+    }
+
+    public synchronized void serialEventOut(Stepper motor, int steps){
+        byte[] out = new byte[2];
+        out[0] = (byte)motor.getValue();
+        out[1] = (byte)steps;
+
+        try {
+            output.write(out);
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 
