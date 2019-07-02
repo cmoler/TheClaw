@@ -85,9 +85,11 @@ public class SerialCommunication implements SerialPortEventListener{
     }
 
     public synchronized void serialEventOut(Stepper motor, int steps){
-        byte[] out = new byte[2];
-        out[0] = (byte)motor.getValue();
-        out[1] = (byte)steps;
+        byte[] out = new byte[4];
+        out[0] = '<';
+        out[1] = (byte)motor.getValue();
+        out[2] = (byte)steps;
+        out[3] = '>';
 
         try {
             output.write(out);
