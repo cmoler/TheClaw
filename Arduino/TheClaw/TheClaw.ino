@@ -15,7 +15,7 @@ int motor;
 int numSteps;
 
 boolean newData = false;
-boolean move = false;
+boolean newMove = false;
 
 void setup() {
     Serial.begin(9600);
@@ -70,17 +70,17 @@ void parseData() {
         strtokIndx = strtok(NULL, ","); // this continues where the previous call left off
         numSteps = atoi(strtokIndx);     // convert this part to an integer
         
-        move = true;
+        newMove = true;
         newData = false;
     }
 }
 
 void moveStepper(){
-    if(move = true){
+    if(newMove == true){
       Serial.println(motor);
       Serial.println(numSteps);
 
       
-      move = false;
+      newMove = false;
     }
 }

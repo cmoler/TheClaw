@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="e79ccae0-5304-46a7-8e90-2c04650e9a53" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/src/SerialCommunication.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/SerialCommunication.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
     </list>
     <ignored path="$PROJECT_DIR$/out/" />
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
@@ -19,12 +19,8 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/Main.java">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="255">
-              <caret line="15" lean-forward="true" selection-start-line="15" selection-end-line="15" />
-              <folding>
-                <element signature="e#204#349#0" expanded="true" />
-                <element signature="e#348#349#0" expanded="true" />
-              </folding>
+            <state relative-caret-position="221">
+              <caret line="15" selection-start-line="15" selection-end-line="15" />
             </state>
           </provider>
         </entry>
@@ -33,7 +29,7 @@
         <entry file="file://$PROJECT_DIR$/src/SerialCommunication.java">
           <provider selected="true" editor-type-id="text-editor">
             <state relative-caret-position="391">
-              <caret line="92" lean-forward="true" selection-start-line="92" selection-end-line="92" />
+              <caret line="92" selection-start-line="92" selection-end-line="92" />
               <folding>
                 <element signature="imports" expanded="true" />
               </folding>
@@ -44,14 +40,8 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/Stepper.java">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="221">
-              <caret line="13" lean-forward="true" selection-start-line="13" selection-end-line="13" />
-              <folding>
-                <element signature="e#132#133#0" expanded="true" />
-                <element signature="e#166#167#0" expanded="true" />
-                <element signature="e#195#196#0" expanded="true" />
-                <element signature="e#223#224#0" expanded="true" />
-              </folding>
+            <state relative-caret-position="153">
+              <caret line="13" selection-start-line="13" selection-end-line="13" />
             </state>
           </provider>
         </entry>
@@ -90,23 +80,8 @@
     </navigator>
     <panes>
       <pane id="Scope" />
+      <pane id="ProjectPane" />
       <pane id="PackagesPane" />
-      <pane id="ProjectPane">
-        <subPane>
-          <expand>
-            <path>
-              <item name="TheClaw" type="b2602c69:ProjectViewProjectNode" />
-              <item name="TheClaw" type="462c0819:PsiDirectoryNode" />
-            </path>
-            <path>
-              <item name="TheClaw" type="b2602c69:ProjectViewProjectNode" />
-              <item name="TheClaw" type="462c0819:PsiDirectoryNode" />
-              <item name="src" type="462c0819:PsiDirectoryNode" />
-            </path>
-          </expand>
-          <select />
-        </subPane>
-      </pane>
     </panes>
   </component>
   <component name="PropertiesComponent">
@@ -162,18 +137,18 @@
       <updated>1561730194435</updated>
       <workItem from="1561730198674" duration="1755000" />
       <workItem from="1562073513409" duration="2025000" />
-      <workItem from="1562093168506" duration="3396000" />
+      <workItem from="1562093168506" duration="4621000" />
+      <workItem from="1562160837018" duration="60000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="7176000" />
+    <option name="totallyTimeSpent" value="8461000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="935" y="-1088" width="1936" height="1056" extended-state="6" />
-    <editor active="true" />
     <layout>
-      <window_info content_ui="combo" id="Project" order="0" visible="true" weight="0.13539445" />
+      <window_info active="true" content_ui="combo" id="Project" order="0" visible="true" weight="0.13646056" />
       <window_info id="Structure" order="1" side_tool="true" weight="0.25" />
       <window_info id="Image Layers" order="2" />
       <window_info id="Designer" order="3" />
@@ -190,7 +165,7 @@
       <window_info anchor="bottom" id="Docker" order="7" show_stripe_button="false" />
       <window_info anchor="bottom" id="Version Control" order="8" />
       <window_info anchor="bottom" id="Database Changes" order="9" />
-      <window_info active="true" anchor="bottom" id="Terminal" order="10" visible="true" weight="0.32936078" />
+      <window_info anchor="bottom" id="Terminal" order="10" visible="true" weight="0.2340195" />
       <window_info anchor="bottom" id="Event Log" order="11" side_tool="true" />
       <window_info anchor="right" id="Commander" internal_type="SLIDING" order="0" type="SLIDING" weight="0.4" />
       <window_info anchor="right" id="Ant Build" order="1" weight="0.25" />
@@ -207,34 +182,24 @@
     <option name="version" value="1" />
   </component>
   <component name="editorHistoryManager">
-    <entry file="file://$PROJECT_DIR$/src/Stepper.java">
+    <entry file="file://$PROJECT_DIR$/src/Main.java">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="221">
-          <caret line="13" lean-forward="true" selection-start-line="13" selection-end-line="13" />
-          <folding>
-            <element signature="e#132#133#0" expanded="true" />
-            <element signature="e#166#167#0" expanded="true" />
-            <element signature="e#195#196#0" expanded="true" />
-            <element signature="e#223#224#0" expanded="true" />
-          </folding>
+          <caret line="15" selection-start-line="15" selection-end-line="15" />
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/Main.java">
+    <entry file="file://$PROJECT_DIR$/src/Stepper.java">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="255">
-          <caret line="15" lean-forward="true" selection-start-line="15" selection-end-line="15" />
-          <folding>
-            <element signature="e#204#349#0" expanded="true" />
-            <element signature="e#348#349#0" expanded="true" />
-          </folding>
+        <state relative-caret-position="153">
+          <caret line="13" selection-start-line="13" selection-end-line="13" />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/src/SerialCommunication.java">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="391">
-          <caret line="92" lean-forward="true" selection-start-line="92" selection-end-line="92" />
+          <caret line="92" selection-start-line="92" selection-end-line="92" />
           <folding>
             <element signature="imports" expanded="true" />
           </folding>
