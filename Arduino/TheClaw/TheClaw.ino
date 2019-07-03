@@ -12,14 +12,18 @@ const byte numChars = 32;
 char receivedChars[numChars];
 
 int motor;
-int numSteps;
+uint32_t numSteps;
 
 boolean newData = false;
 boolean newMove = false;
 
+union ArrayToInteger {
+ byte array[4];
+ uint32_t integer;
+};
+
 void setup() {
     Serial.begin(9600);
-    Serial.println("<3, 1200>");
 }
 
 void loop() {
@@ -37,7 +41,7 @@ void recvWithStartEndMarkers() {
  
     while (Serial.available() > 0 && newData == false) {
         rc = Serial.read();
-
+        
         if (recvInProgress == true) {
             if (rc != endMarker) {
                 receivedChars[ndx] = rc;
@@ -62,13 +66,17 @@ void recvWithStartEndMarkers() {
 
 void parseData() {
     if (newData == true) {
-        char * strtokIndx; // this is used by strtok() as an index
-  
-        strtokIndx = strtok(receivedChars,",");      // get the first part - the motor to move
-        motor = atoi(strtokIndx);     // convert this part to an integer
+        // split the data into its parts
+        
+        motor = receivedChars[0];     // convert this part to an integer
 
-        strtokIndx = strtok(NULL, ","); // this continues where the previous call left off
-        numSteps = atoi(strtokIndx);     // convert this part to an integer
+        ArrayToInteger converter; //Create a converter
+
+        for(int i=2; i < 5; i++){
+           converter.array[i - 2]=receivedChars[i];
+        }
+
+        numSteps = converter.integer;     // convert this part to an integer
         
         newMove = true;
         newData = false;
@@ -77,7 +85,9 @@ void parseData() {
 
 void moveStepper(){
     if(newMove == true){
+      Serial.print("move stepper motor ");
       Serial.println(motor);
+      Serial.print("move stepper num steps ");
       Serial.println(numSteps);
 
       

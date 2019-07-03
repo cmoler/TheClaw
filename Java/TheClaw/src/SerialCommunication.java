@@ -6,15 +6,20 @@ import gnu.io.CommPortIdentifier;
 import gnu.io.SerialPort;
 import gnu.io.SerialPortEvent;
 import gnu.io.SerialPortEventListener;
+
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.util.Enumeration;
+
+import static java.nio.ByteBuffer.allocate;
 
 public class SerialCommunication implements SerialPortEventListener{
 
     SerialPort serialPort;
 
     private static final String PORT_NAMES[] = {
-            "/dev/tty.usbserial-A9007UX1", // Mac OS X
-            "/dev/ttyUSB0", // Linux
+//            "/dev/tty.usbserial-A9007UX1", // Mac OS X
+//            "/dev/ttyUSB0", // Linux
             "COM4", // Windows
     };
 
@@ -85,11 +90,17 @@ public class SerialCommunication implements SerialPortEventListener{
     }
 
     public synchronized void serialEventOut(Stepper motor, int steps){
-        byte[] out = new byte[4];
+        byte[] stepsArray = ByteBuffer.allocate(4).order(ByteOrder.LITTLE_ENDIAN).putInt(steps).array();
+
+        byte[] out = new byte[8];
         out[0] = '<';
         out[1] = (byte)motor.getValue();
-        out[2] = (byte)steps;
-        out[3] = '>';
+        out[2] = ',';
+        out[3] = stepsArray[0];
+        out[4] = stepsArray[1];
+        out[5] = stepsArray[2];
+        out[6] = stepsArray[3];
+        out[7] = '>';
 
         try {
             output.write(out);

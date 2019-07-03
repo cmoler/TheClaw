@@ -1,3 +1,5 @@
+import java.util.Scanner;
+
 public class Main {
 
     public static void main(String[] args) {
@@ -5,11 +7,19 @@ public class Main {
         serialCommunication.initialize();
         Thread t = new Thread(){
           public void run() {
-              try { Thread.sleep(1000000); } catch (InterruptedException ie) {}
+              try {
+                  Thread.sleep(10);
+                  Scanner input = new Scanner(System.in);
+                  int steps = input.nextInt();
+                  serialCommunication.serialEventOut(Stepper.FORE_ARM, steps);
+              } catch (InterruptedException ie) {}
           }
         };
-        serialCommunication.serialEventOut(Stepper.BASE, 2);
         t.start();
+
+
+
+
         System.out.println("Started");
     }
 }
