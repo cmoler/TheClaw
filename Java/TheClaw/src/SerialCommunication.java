@@ -11,17 +11,9 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.Enumeration;
 
-import static java.nio.ByteBuffer.allocate;
-
 public class SerialCommunication implements SerialPortEventListener{
 
     SerialPort serialPort;
-
-    private static final String PORT_NAMES[] = {
-//            "/dev/tty.usbserial-A9007UX1", // Mac OS X
-//            "/dev/ttyUSB0", // Linux
-            "COM4", // Windows
-    };
 
     /**
      * A BufferedReader which will be fed by a InputStreamReader
@@ -36,14 +28,15 @@ public class SerialCommunication implements SerialPortEventListener{
     /** Default bits per second for COM port. */
     private static final int DATA_RATE = 9600;
 
-    public void initialize() {
+    public void initialize(String[] portNames) {
         CommPortIdentifier portId = null;
         Enumeration portEnum = CommPortIdentifier.getPortIdentifiers();
 
         //First, Find an instance of serial port as set in PORT_NAMES.
         while (portEnum.hasMoreElements()) {
             CommPortIdentifier currPortId = (CommPortIdentifier) portEnum.nextElement();
-            for (String portName : PORT_NAMES) {
+            System.out.println("Found port " + currPortId.getName());
+            for (String portName : portNames) {
                 if (currPortId.getName().equals(portName)) {
                     portId = currPortId;
                     break;
@@ -115,8 +108,10 @@ public class SerialCommunication implements SerialPortEventListener{
     public synchronized void serialEvent(SerialPortEvent oEvent) {
         if (oEvent.getEventType() == SerialPortEvent.DATA_AVAILABLE) {
             try {
-                String inputLine=input.readLine();
-                System.out.println(inputLine);
+                if (input.ready()) {
+                    String inputLine = input.readLine();
+                    System.out.println(inputLine);
+                }
             } catch (Exception e) {
                 System.err.println(e.toString());
             }

@@ -1,7 +1,7 @@
 <component name="libraryTable">
   <library name="RXTXcomm">
     <CLASSES>
-      <root url="jar://$USER_HOME$/Downloads/mfz-rxtx-2.2-20081207-win-x64/mfz-rxtx-2.2-20081207-win-x64/RXTXcomm.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/mfz-rxtx-2/RXTXcomm.jar!/" />
     </CLASSES>
     <JAVADOC />
     <SOURCES />

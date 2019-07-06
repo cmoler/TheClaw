@@ -3,23 +3,28 @@ import java.util.Scanner;
 public class Main {
 
     public static void main(String[] args) {
-        SerialCommunication serialCommunication = new SerialCommunication();
-        serialCommunication.initialize();
-        Thread t = new Thread(){
-          public void run() {
-              try {
-                  Thread.sleep(10);
-                  Scanner input = new Scanner(System.in);
-                  int steps = input.nextInt();
-                  serialCommunication.serialEventOut(Stepper.FORE_ARM, steps);
-              } catch (InterruptedException ie) {}
-          }
-        };
-        t.start();
-
-
-
+        SerialThread serialThread = new SerialThread();
+        serialThread.start();
 
         System.out.println("Started");
+        boolean running = true;
+        while (running) {
+            System.out.println("What angle for forearm?");
+            Scanner input = new Scanner(System.in);
+            String in = input.nextLine();
+            if (in.isEmpty()) {
+                running = false;
+            } else if (in.equalsIgnoreCase("burst")) {
+                for (int i = 0; i < 180; i += 1) {
+                    serialThread.sendCommand(Stepper.FORE_ARM, (float) i);
+                }
+            } else {
+                float angle = Float.parseFloat(in);
+                serialThread.sendCommand(Stepper.FORE_ARM, angle);
+            }
+        }
+        while (serialThread.getQueueSize() > 0) {}
+        System.out.println("Closing");
+        serialThread.close();
     }
 }

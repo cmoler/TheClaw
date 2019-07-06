@@ -1,10 +1,13 @@
 <component name="libraryTable">
   <library name="mfz-rxtx-2">
-    <CLASSES />
+    <CLASSES>
+      <root url="file://$PROJECT_DIR$/lib/mfz-rxtx-2" />
+    </CLASSES>
     <JAVADOC />
     <NATIVE>
-      <root url="file://$USER_HOME$/Downloads/mfz-rxtx-2.2-20081207-win-x64/mfz-rxtx-2.2-20081207-win-x64" />
+      <root url="file://$PROJECT_DIR$/lib/mfz-rxtx-2" />
     </NATIVE>
     <SOURCES />
+    <jarDirectory url="file://$PROJECT_DIR$/lib/mfz-rxtx-2" recursive="false" />
   </library>
 </component>
