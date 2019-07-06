@@ -43,7 +43,7 @@ public class SerialThread extends Thread {
         while (boundedAngle < 0) {
             boundedAngle += 360f;
         }
-        boundedAngle = Math.min(Math.max(boundedAngle % 360, 15), 165);
+        boundedAngle = boundedAngle % 360;
         int steps = Math.round((boundedAngle / 360f) * (float)(MAX_STEP));
         commandQ.add(new MotorCommand(motor, steps));
     }
