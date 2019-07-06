@@ -1,8 +1,11 @@
+import org.apache.logging.log4j.Level;
+
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
 public class SerialThread extends Thread {
 
+    private Logit logger = Logit.getLogit("SerialTh");
     private SerialCommunication serialCom;
     private boolean closed = false;
     private BlockingQueue<MotorCommand> commandQ;
@@ -22,6 +25,10 @@ public class SerialThread extends Thread {
 
     public SerialCommunication getSerialCom() {
         return this.serialCom;
+    }
+
+    public boolean isClosed() {
+        return this.closed;
     }
 
     public int getQueueSize() {
@@ -50,11 +57,16 @@ public class SerialThread extends Thread {
 
     @Override
     public void run() {
-        this.serialCom.initialize(PORT_NAMES);
+        try {
+            this.serialCom.initialize(PORT_NAMES);
+        } catch (IllegalStateException e) {
+            logger.log(Level.ERROR, e.toString());
+            this.closed = true;
+        }
         while (!this.closed) {
             if (commandQ.peek() != null) {
                 MotorCommand cmd = commandQ.remove();
-                System.out.println("Sending " + cmd.steps + " / " + MAX_STEP);
+                logger.log(Level.DEBUG, "Sending " + cmd.steps + " / " + MAX_STEP);
                 this.serialCom.serialEventOut(cmd.motor, cmd.steps);
             }
         }

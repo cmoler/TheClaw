@@ -6,6 +6,7 @@ import gnu.io.CommPortIdentifier;
 import gnu.io.SerialPort;
 import gnu.io.SerialPortEvent;
 import gnu.io.SerialPortEventListener;
+import org.apache.logging.log4j.Level;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -14,6 +15,8 @@ import java.util.Enumeration;
 public class SerialCommunication implements SerialPortEventListener{
 
     SerialPort serialPort;
+
+    private Logit logger = Logit.getLogit("SerialCom");
 
     /**
      * A BufferedReader which will be fed by a InputStreamReader
@@ -28,14 +31,14 @@ public class SerialCommunication implements SerialPortEventListener{
     /** Default bits per second for COM port. */
     private static final int DATA_RATE = 9600;
 
-    public void initialize(String[] portNames) {
+    public void initialize(String[] portNames) throws IllegalStateException {
         CommPortIdentifier portId = null;
         Enumeration portEnum = CommPortIdentifier.getPortIdentifiers();
 
         //First, Find an instance of serial port as set in PORT_NAMES.
         while (portEnum.hasMoreElements()) {
             CommPortIdentifier currPortId = (CommPortIdentifier) portEnum.nextElement();
-            System.out.println("Found port " + currPortId.getName());
+            logger.log(Level.INFO,"Found port " + currPortId.getName());
             for (String portName : portNames) {
                 if (currPortId.getName().equals(portName)) {
                     portId = currPortId;
@@ -44,8 +47,7 @@ public class SerialCommunication implements SerialPortEventListener{
             }
         }
         if (portId == null) {
-            System.out.println("Could not find COM port.");
-            return;
+            throw new IllegalStateException("Could not find COM port.");
         }
 
         try {
@@ -67,7 +69,7 @@ public class SerialCommunication implements SerialPortEventListener{
             serialPort.addEventListener(this);
             serialPort.notifyOnDataAvailable(true);
         } catch (Exception e) {
-            System.err.println(e.toString());
+            logger.log(Level.ERROR,e.toString());
         }
     }
 
@@ -98,7 +100,7 @@ public class SerialCommunication implements SerialPortEventListener{
         try {
             output.write(out);
         } catch (IOException e) {
-            e.printStackTrace();
+            logger.log(Level.ERROR, e.toString());
         }
     }
 
@@ -110,10 +112,10 @@ public class SerialCommunication implements SerialPortEventListener{
             try {
                 if (input.ready()) {
                     String inputLine = input.readLine();
-                    System.out.println(inputLine);
+                    logger.log(Level.DEBUG, inputLine);
                 }
             } catch (Exception e) {
-                System.err.println(e.toString());
+                logger.log(Level.ERROR, e.toString());
             }
         }
         // Ignore all the other eventTypes, but you should consider the other ones.
