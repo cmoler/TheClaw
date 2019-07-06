@@ -68,6 +68,11 @@ public class SerialThread extends Thread {
                 MotorCommand cmd = commandQ.remove();
                 logger.log(Level.DEBUG, "Sending " + cmd.steps + " / " + MAX_STEP);
                 this.serialCom.serialEventOut(cmd.motor, cmd.steps);
+                try {
+                    Thread.sleep(10);
+                } catch (InterruptedException e) {
+                    logger.log(Level.ERROR, e.toString());
+                }
             }
         }
     }
