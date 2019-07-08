@@ -1,4 +1,5 @@
 #include <Stepper.h>
+#include <Servo.h>
 
 // Helper structs and unions
 struct cmd_t {
@@ -10,6 +11,8 @@ struct stepper_t {
   int motor;
   float currentAngle;
   float targetAngle;
+  int pins[4];
+  int pinNum;
 };
 
 union ArrayToInteger {
@@ -44,25 +47,33 @@ const int MOTOR_FORE = 2;
 const int PIN_MANUAL = 12;
 const int PINS_LEFT[] = { A0, A2, A4 };
 const int PINS_RIGHT[] = { A1, A3, A5 };
+const int PIN_GRIPPER = 2;
 
-Stepper base(stepsPerRevolution, 4, 5);
-Stepper upper_arm(stepsPerRevolution, 6, 7);
-Stepper fore_arm(stepsPerRevolution, 8, 9, 10, 11);
+const int PINS_BASE[2] = { 4, 5 };
+const int PINS_UPPER[2] = { 6, 7 };
+const int PINS_FORE[4] = { 8, 9, 10, 11 };
+
+stepper_t baseStepper = { MOTOR_BASE, 90, 90, { 4, 5 }, 2 };
+stepper_t upperStepper = { MOTOR_UPPER, 90, 90, { 6, 7 }, 2 };
+stepper_t foreStepper = { MOTOR_FORE, 90, 90, { 8, 9, 10, 11 }, 4 };
+
+Stepper base(stepsPerRevolution, baseStepper.pins[0], baseStepper.pins[1]);
+Stepper upper_arm(stepsPerRevolution, upperStepper.pins[0], upperStepper.pins[1]);
+Stepper fore_arm(stepsPerRevolution, foreStepper.pins[0], foreStepper.pins[1], foreStepper.pins[2], foreStepper.pins[3]);
+Servo gripperServo;
 
 // State
-stepper_t baseStepper = { MOTOR_BASE, 90, 90 };
-stepper_t upperStepper = { MOTOR_UPPER, 90, 90 };
-stepper_t foreStepper = { MOTOR_FORE, 90, 90 };
-
 stepper_t steppers[3];
 Stepper motors[] = { base, upper_arm, fore_arm };
 
+int closeGripper;
 int useManual;
 
 void setup() {
     Serial.begin(9600);
 
     // pins
+    pinMode(PIN_GRIPPER, INPUT_PULLUP);
     pinMode(PIN_MANUAL, INPUT_PULLUP);
     pinMode(13, OUTPUT);
     for (int i = 0; i < 3; i++) {
@@ -83,9 +94,12 @@ void setup() {
     
     steppers[2] = foreStepper;
     motors[MOTOR_FORE] = fore_arm;
+
+    gripperServo.attach(3 );
     
     // state
     useManual = false;
+    closeGripper = false;
 }
 
 void loop() {
@@ -104,12 +118,19 @@ void loop() {
       recvWithStartEndMarkers();
       parseData();
     }
-    recvWithStartEndMarkers();
-    parseData();
     moveStepper();
+    moveGripper();
 }
 
-void moveStepper(){
+void moveGripper() {
+  if (closeGripper) {
+    gripperServo.write(90);
+  } else {
+    gripperServo.write(160);
+  }
+}
+
+void moveStepper() {
     if (cmdBufferLen > 0) {
       cmd_t cmd = removeCommand();
       Serial.println((cmd.motor * 10000) + cmd.steps);
@@ -133,6 +154,10 @@ void moveStepper(){
         float change = steps * (360.0 / stepsPerRevolution);
         steppers[i].currentAngle += change;
         Serial.println(change);
+      } else if (s.pinNum == 4) {
+        for (int j = 0; j < 4; j++) {
+          digitalWrite(s.pins[j], LOW);
+        }
       }
     }
 }
@@ -209,6 +234,7 @@ void recvManual() {
       steppers[i].targetAngle = min(max(steppers[i].targetAngle, 0), 360);
     }
   }
+  closeGripper = !digitalRead(PIN_GRIPPER);
 }
 
 // Buffer logic
