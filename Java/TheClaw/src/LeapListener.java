@@ -60,7 +60,8 @@ public class LeapListener extends Listener {
         InteractionBox interactionBox = frame.interactionBox();
 
         if (!frame.hands().isEmpty()) {
-            Vector palmPosition = frame.hands().get(0).palmPosition();
+            Hand hand = frame.hands().get(0);
+            Vector palmPosition = hand.palmPosition();
 
             // Scale from Leap Space to Robo Arm Space
             Vector mappedPosition = mapLeapToWorld(palmPosition, interactionBox);
@@ -71,11 +72,15 @@ public class LeapListener extends Listener {
             double xz = Math.hypot(mappedPosition.getX(), mappedPosition.getZ());
             double[] kinematicsAngles = calcInverseKinematics(mappedPosition.getY(), xz);
 
+            // Get gripper close ratio, 0 for open hand - 1 for closed "pinch"
+            float gripperRatio = hand.pinchStrength();
+
             // Set all angles as degrees within the LeapPosition to send to arduino
             leapPosition.updateAngles(
                     (float) Math.toDegrees(baseAngle),
                     (float) Math.toDegrees(kinematicsAngles[0]), // Lower arm angle
-                    (float) Math.toDegrees(kinematicsAngles[1])); // Upper arm angle
+                    (float) Math.toDegrees(kinematicsAngles[1]),
+                    gripperRatio); // Upper arm angle
         }
     }
 
