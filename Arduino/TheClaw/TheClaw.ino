@@ -11,6 +11,8 @@ struct stepper_t {
   int motor;
   float currentAngle;
   float targetAngle;
+  float minAngle;
+  float maxAngle;
   int pins[4];
   int pinNum;
 };
@@ -48,25 +50,24 @@ const int PIN_MANUAL = 12;
 const int PINS_LEFT[] = { A0, A2, A4 };
 const int PINS_RIGHT[] = { A1, A3, A5 };
 const int PIN_GRIPPER = 2;
+const int PIN_XOR_CTRL = 13;
 
-const int PINS_BASE[2] = { 4, 5 };
-const int PINS_UPPER[2] = { 6, 7 };
-const int PINS_FORE[4] = { 8, 9, 10, 11 };
+stepper_t baseStepper = { MOTOR_BASE, 90, 90, 15, 165, { 8, 9, 10, 11 }, 4 };
+stepper_t upperStepper = { MOTOR_UPPER, 90, 90, 20, 90, { 6, 7 }, 2 };
+stepper_t foreStepper = { MOTOR_FORE, 180, 180, 40, 180, { 4, 5 }, 2 };
 
-stepper_t baseStepper = { MOTOR_BASE, 90, 90, { 4, 5 }, 2 };
-stepper_t upperStepper = { MOTOR_UPPER, 90, 90, { 6, 7 }, 2 };
-stepper_t foreStepper = { MOTOR_FORE, 90, 90, { 8, 9, 10, 11 }, 4 };
-
-Stepper base(stepsPerRevolution, baseStepper.pins[0], baseStepper.pins[1]);
+Stepper base(stepsPerRevolution, baseStepper.pins[0], baseStepper.pins[1], baseStepper.pins[2], baseStepper.pins[3]);
 Stepper upper_arm(stepsPerRevolution, upperStepper.pins[0], upperStepper.pins[1]);
-Stepper fore_arm(stepsPerRevolution, foreStepper.pins[0], foreStepper.pins[1], foreStepper.pins[2], foreStepper.pins[3]);
+Stepper fore_arm(stepsPerRevolution, foreStepper.pins[0], foreStepper.pins[1]);
 Servo gripperServo;
 
 // State
 stepper_t steppers[3];
 Stepper motors[] = { base, upper_arm, fore_arm };
 
-int closeGripper;
+int gripperClose = 90;
+int gripperOpen = 160;
+int gripperVal;
 int useManual;
 
 void setup() {
@@ -75,7 +76,7 @@ void setup() {
     // pins
     pinMode(PIN_GRIPPER, INPUT_PULLUP);
     pinMode(PIN_MANUAL, INPUT_PULLUP);
-    pinMode(13, OUTPUT);
+    pinMode(PIN_XOR_CTRL, OUTPUT);
     for (int i = 0; i < 3; i++) {
       pinMode(PINS_LEFT[i], INPUT_PULLUP);
       pinMode(PINS_RIGHT[i], INPUT_PULLUP);
@@ -99,7 +100,7 @@ void setup() {
     
     // state
     useManual = false;
-    closeGripper = false;
+    gripperVal = gripperOpen;
 }
 
 void loop() {
@@ -111,7 +112,6 @@ void loop() {
       recvNdx = 0;
     }
     useManual = manualIn;
-    digitalWrite(13, useManual);
     if (useManual) {
       recvManual();
     } else {
@@ -123,11 +123,8 @@ void loop() {
 }
 
 void moveGripper() {
-  if (closeGripper) {
-    gripperServo.write(90);
-  } else {
-    gripperServo.write(160);
-  }
+    gripperVal = min(max(gripperVal, gripperClose), gripperOpen);
+    gripperServo.write(gripperVal);
 }
 
 void moveStepper() {
@@ -140,26 +137,45 @@ void moveStepper() {
       }
     }
 
+    int xorVal = HIGH;
     for (int i = 0; i < 3; i++) {
+      // copy and read
       stepper_t s = steppers[i];
-      Stepper m = motors[s.motor];
+
+      // normalize values
+      s.targetAngle = min(max(s.targetAngle, s.minAngle), s.maxAngle);
+
+      // move
+      
       float delta = (s.targetAngle - s.currentAngle);
       int dir = signum(delta);
       if (delta != 0 && abs(delta) > 1) {
         int steps = min(max(abs((delta / 360) * stepsPerRevolution), 1), stepSize) * dir;
-        m.step(steps);
+        motors[s.motor].step(steps);
         Serial.println(s.targetAngle);
         Serial.println(s.currentAngle);
         Serial.println(steps);
         float change = steps * (360.0 / stepsPerRevolution);
-        steppers[i].currentAngle += change;
+        s.currentAngle += change;
         Serial.println(change);
-      } else if (s.pinNum == 4) {
-        for (int j = 0; j < 4; j++) {
-          digitalWrite(s.pins[j], LOW);
+      } else {
+        if (s.pinNum == 4) {
+          for (int j = 0; j < 4; j++) {
+            digitalWrite(s.pins[j], LOW);
+          }
+        } else if (s.pinNum == 2 && s.motor == MOTOR_FORE) {
+          for (int j = 0; j < 2; j++) {
+            digitalWrite(s.pins[j], LOW);
+          }
+          xorVal = LOW;
         }
+        
       }
+
+      // update
+      steppers[i] = s;
     }
+    digitalWrite(PIN_XOR_CTRL, xorVal);
 }
 
 int signum(float n) {
@@ -234,7 +250,11 @@ void recvManual() {
       steppers[i].targetAngle = min(max(steppers[i].targetAngle, 0), 360);
     }
   }
-  closeGripper = !digitalRead(PIN_GRIPPER);
+  if (!digitalRead(PIN_GRIPPER)) {
+    gripperVal = gripperClose;
+  } else {
+    gripperVal = gripperOpen;
+  }
 }
 
 // Buffer logic
