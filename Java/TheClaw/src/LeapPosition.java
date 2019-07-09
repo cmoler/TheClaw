@@ -3,6 +3,7 @@
  */
 public class LeapPosition {
 
+    // Float degree values for arduino usage
     public float baseAngle;
     public float lowerArmAngle;
     public float upperArmAngle;

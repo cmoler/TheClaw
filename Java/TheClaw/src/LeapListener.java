@@ -6,27 +6,31 @@ import com.leapmotion.leap.*;
 public class LeapListener extends Listener {
 
     /*
-        Constants/ Max & Min values
+        Constants: Max & Min values for Length and Angles
      */
     static final int LOWER_ARM_LEN = 90;
     static final int UPPER_ARM_LEN = 50;
     static final int GRIPPER_LEN = 68;
-    static final int TOTAL_ARM_LEN = LOWER_ARM_LEN + UPPER_ARM_LEN + GRIPPER_LEN;
+    static final int TOTAL_ARM_LEN = LOWER_ARM_LEN + UPPER_ARM_LEN + GRIPPER_LEN; // 208
 
-    static final float LOWER_ARM_ANGLE_MIN = 20;
-    static final float LOWER_ARM_ANGLE_MAX = 90;
-    static final float UPPER_ARM_ANGLE_MIN = 40;
-    static final float UPPER_ARM_ANGLE_MAX = 180;
-    static final float BASE_ANGLE_MIN = 0;
-    static final float BASE_ANGLE_MAX = 150;
+    // All angle calculations use radians, casted back to degrees before sent to arduino
+    static final double LOWER_ARM_ANGLE_MIN = Math.toRadians(20); // 0.349
+    static final double LOWER_ARM_ANGLE_MAX = Math.toRadians(90); // 1.571
+    static final double UPPER_ARM_ANGLE_MIN = Math.toRadians(40); // 0.698
+    static final double UPPER_ARM_ANGLE_MAX = Math.toRadians(180); // 3.142
+    static final double BASE_ANGLE_MIN = Math.toRadians(0);
+    static final double BASE_ANGLE_MAX = Math.toRadians(150); // 2.618
 
     static final float Y_MAX = TOTAL_ARM_LEN;
-    static final float X_MAX = (float) (Math.cos(LOWER_ARM_ANGLE_MIN) * TOTAL_ARM_LEN);
+    static final float X_MAX = (float) (Math.cos(LOWER_ARM_ANGLE_MIN) * TOTAL_ARM_LEN); // 195.461
 
-    // Inner hypotenuse angle calculated using law of cosines
+    // Inner hypotenuse minimum length calculated using law of cosines with min upper arm angle
     static final double INNER_HYPOT_MIN = (LOWER_ARM_LEN * LOWER_ARM_LEN)
             + ((UPPER_ARM_LEN + GRIPPER_LEN) * (UPPER_ARM_LEN + GRIPPER_LEN))
-          - (2 * LOWER_ARM_LEN * (UPPER_ARM_LEN + GRIPPER_LEN) * Math.cos(UPPER_ARM_ANGLE_MIN));
+          - (2 * LOWER_ARM_LEN * (UPPER_ARM_LEN + GRIPPER_LEN) * Math.cos(UPPER_ARM_ANGLE_MIN)); // 45.441
+
+    // Value of 100 would mean final range of 200mm across
+    static final float SCALE_CONSTANT = TOTAL_ARM_LEN;
 
     LeapPosition leapPosition;
 
@@ -53,36 +57,56 @@ public class LeapListener extends Listener {
         System.out.println("Frame available");
 
         Frame frame = controller.frame();
+        InteractionBox interactionBox = frame.interactionBox();
 
         if (!frame.hands().isEmpty()) {
             Vector palmPosition = frame.hands().get(0).palmPosition();
 
-            // Restrict Leap Space
-            //TODO: normalize correctly?
-            if (palmPosition.getY() > Y_MAX) {
-                palmPosition.setY(Y_MAX);
-            }
-
-            if (palmPosition.getX() > X_MAX) {
-                palmPosition.setX(X_MAX);
-            }
-
-            if (palmPosition.getZ() > X_MAX) {
-                palmPosition.setZ(X_MAX);
-            }
+            // Scale from Leap Space to Robo Arm Space
+            Vector mappedPosition = mapLeapToWorld(palmPosition, interactionBox);
 
             // Calculate Angles
-            float baseAngle = calcBaseAngle(palmPosition.getX(), palmPosition.getZ());
-            float xz = (float) Math.hypot(palmPosition.getX(), palmPosition.getZ());
-            float[] kinematicsAngles = calcInverseKinematics(palmPosition.getY(), xz);
+            double baseAngle = calcBaseAngle(mappedPosition.getX(), mappedPosition.getZ());
 
-            // Set all angles within the LeapPosition
-            leapPosition.updateAngles(baseAngle, kinematicsAngles[0], kinematicsAngles[1]);
+            double xz = Math.hypot(mappedPosition.getX(), mappedPosition.getZ());
+            double[] kinematicsAngles = calcInverseKinematics(mappedPosition.getY(), xz);
+
+            // Set all angles as degrees within the LeapPosition to send to arduino
+            leapPosition.updateAngles(
+                    (float) Math.toDegrees(baseAngle),
+                    (float) Math.toDegrees(kinematicsAngles[0]), // Lower arm angle
+                    (float) Math.toDegrees(kinematicsAngles[1])); // Upper arm angle
         }
     }
 
-    private float calcBaseAngle(float x, float z) {
-        float angle = (float) Math.toDegrees(Math.tan(z / x));
+    private Vector mapLeapToWorld(Vector leapPoint, InteractionBox interactionBox){
+
+      Vector normalized = interactionBox.normalizePoint(leapPoint, false);
+
+      // Recenter origin from bottom back left to bottom center
+      normalized = normalized.plus(new Vector((float) 0.5, 0, (float) 0.5));
+
+      // Scale up to robot space
+      normalized = normalized.times(SCALE_CONSTANT);
+
+      // Restrict max/min values
+      if (normalized.getY() > Y_MAX) {
+        normalized.setY(Y_MAX);
+      }
+
+      if (normalized.getX() > X_MAX) {
+        normalized.setX(X_MAX);
+      }
+
+      if (normalized.getZ() > X_MAX) {
+        normalized.setZ(X_MAX);
+      }
+
+      return normalized;
+    }
+
+    private double calcBaseAngle(float x, float z) {
+        double angle = Math.tan(z / x);
 
         // Restrict angles to min and max
         if (angle > BASE_ANGLE_MAX) {
@@ -94,10 +118,10 @@ public class LeapListener extends Listener {
         return angle;
     }
 
-    private float[] calcInverseKinematics(float y, float xz) {
+    private double[] calcInverseKinematics(double y, double xz) {
       double h = Math.hypot(y, xz);
 
-      // Restrict angles to min and max
+      // Restrict hypotenuse to min and max robot arm range
       if (h > TOTAL_ARM_LEN) {
         h = TOTAL_ARM_LEN;
       } else if (h < INNER_HYPOT_MIN) {
@@ -119,7 +143,7 @@ public class LeapListener extends Listener {
                       - (h * h))
                       / (2 * LOWER_ARM_LEN * (UPPER_ARM_LEN + GRIPPER_LEN)));
 
-      float[] angles = {(float) Math.toDegrees(a1 + a2), (float) Math.toDegrees(upperArmAngle)};
+      double[] angles = {(a1 + a2), upperArmAngle};
 
       return angles;
     }
