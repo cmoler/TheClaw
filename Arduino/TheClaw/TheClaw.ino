@@ -152,6 +152,7 @@ void moveStepper() {
     if (delta != 0 && abs(delta) > 1) {
       int steps = min(max(abs((delta / 360) * stepsPerRevolution), 1), stepSize) * dir;
       allSteps[i] = steps;
+      Serial.println("_");
       Serial.println(s.targetAngle);
       Serial.println(s.currentAngle);
       Serial.println(steps);
@@ -171,12 +172,6 @@ void moveStepper() {
   while (cont) {
     cont = false;
     for (i = 0; i < 3; i++) {
-      if (i == MOTOR_FORE) {
-        Serial.print(i);
-        Serial.print("-");
-        Serial.println(allSteps[i]);
-      }
-
       int dir = signum(allSteps[i]);
       if (dir != 0) {
         int stepCount = min(abs(allSteps[i]), subStepSize);
