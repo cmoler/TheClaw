@@ -56,7 +56,7 @@ public class LeapListener extends Listener {
 
     public void onFrame(Controller controller) {
 
-        System.out.println("Frame available");
+        // System.out.println("Frame available");
 
         Frame frame = controller.frame();
         InteractionBox interactionBox = frame.interactionBox();
@@ -83,6 +83,8 @@ public class LeapListener extends Listener {
                     (float) Math.toDegrees(kinematicsAngles[0]), // Lower arm angle
                     (float) Math.toDegrees(kinematicsAngles[1]),
                     gripperRatio); // Upper arm angle
+
+            System.out.println(leapPosition.toString());
         }
     }
 

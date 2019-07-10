@@ -21,4 +21,15 @@ public class LeapPosition {
         this.upperArmAngle = upperArmAngle;
         this.gripperRatio = gripperRatio;
     }
+
+    @Override()
+    public String toString() {
+        return String.format(
+                "Base: %10f; Lower: %10f; Upper: %10f; Gripper: %10f",
+                this.baseAngle,
+                this.lowerArmAngle,
+                this.upperArmAngle,
+                this.gripperRatio
+        );
+    }
 }
