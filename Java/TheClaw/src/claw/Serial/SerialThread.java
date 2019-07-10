@@ -1,3 +1,6 @@
+package claw.Serial;
+
+import claw.Logit;
 import org.apache.logging.log4j.Level;
 
 import java.util.concurrent.BlockingQueue;

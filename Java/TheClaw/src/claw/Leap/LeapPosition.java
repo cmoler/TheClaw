@@ -1,5 +1,7 @@
+package claw.Leap;
+
 /*
-    Object that holds angles from Leap Motion
+    Object that holds angles from claw.Leap Motion
  */
 public class LeapPosition {
 

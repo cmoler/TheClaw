@@ -1,3 +1,5 @@
+package claw.Serial;
+
 public enum Stepper {
     BASE(0), UPPER_ARM(1), FORE_ARM(2), GRIPPER(3);
 

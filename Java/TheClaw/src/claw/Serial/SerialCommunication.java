@@ -1,7 +1,11 @@
+package claw.Serial;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+
+import claw.Logit;
 import gnu.io.CommPortIdentifier;
 import gnu.io.SerialPort;
 import gnu.io.SerialPortEvent;
@@ -84,7 +88,7 @@ public class SerialCommunication implements SerialPortEventListener{
         }
     }
 
-    public synchronized void serialEventOut(Stepper motor, int steps){
+    public synchronized void serialEventOut(claw.Serial.Stepper motor, int steps){
         byte[] stepsArray = ByteBuffer.allocate(4).order(ByteOrder.LITTLE_ENDIAN).putInt(steps).array();
 
         byte[] out = new byte[8];

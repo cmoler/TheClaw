@@ -1,22 +1,17 @@
-import java.util.Scanner;
-import java.util.UUID;
+package claw.Serial;
 
 import claw.Logit;
-import claw.Serial.SerialThread;
-import claw.Serial.Stepper;
 import org.apache.logging.log4j.Level;
-import org.apache.logging.log4j.ThreadContext;
 
-public class Main {
+import java.util.Scanner;
 
-    private static final Logit logger = Logit.getLogit("Main");
-    private static SerialThread serialThread;
-    private static UUID contextId;
+public class SerialMain {
+    private static final Logit logger = Logit.getLogit("ArduinoMain");
+    private static claw.Serial.SerialThread serialThread;
 
     public static void main(String[] args) {
-        contextId = UUID.randomUUID();
 
-        serialThread = new SerialThread();
+        serialThread = new claw.Serial.SerialThread();
         serialThread.start();
 
         logger.log(Level.INFO, "Started");
@@ -30,7 +25,7 @@ public class Main {
                 running = false;
             } else if (in.equalsIgnoreCase("burst")) {
                 for (int i = 0; i < 180; i += 1) {
-                    sendCommand(Stepper.FORE_ARM, (float) i);
+                    sendCommand(claw.Serial.Stepper.FORE_ARM, (float) i);
                 }
             } else {
                 float angle = Float.parseFloat(in);
@@ -51,10 +46,8 @@ public class Main {
         serialThread.close();
     }
 
-    private static void sendCommand(Stepper motor, float angle) {
-        ThreadContext.push(contextId.toString());
+    private static void sendCommand(claw.Serial.Stepper motor, float angle) {
         logger.log(Level.DEBUG, "Sending <" + motor + ", " + angle + ">");
         serialThread.sendCommand(motor, angle);
-        ThreadContext.pop();
     }
 }

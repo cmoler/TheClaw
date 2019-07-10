@@ -1,7 +1,9 @@
+package claw.Leap;
+
 import com.leapmotion.leap.*;
 
 /*
-    Listener for the Leap in order to grab values from it once it is connected
+    Listener for the claw.Leap in order to grab values from it once it is connected
  */
 public class LeapListener extends Listener {
 
@@ -63,7 +65,7 @@ public class LeapListener extends Listener {
             Hand hand = frame.hands().get(0);
             Vector palmPosition = hand.palmPosition();
 
-            // Scale from Leap Space to Robo Arm Space
+            // Scale from claw.Leap Space to Robo Arm Space
             Vector mappedPosition = mapLeapToWorld(palmPosition, interactionBox);
 
             // Calculate Angles
@@ -75,7 +77,7 @@ public class LeapListener extends Listener {
             // Get gripper close ratio, 0 for open hand - 1 for closed "pinch"
             float gripperRatio = hand.pinchStrength();
 
-            // Set all angles as degrees within the LeapPosition to send to arduino
+            // Set all angles as degrees within the claw.Leap.LeapPosition to send to arduino
             leapPosition.updateAngles(
                     (float) Math.toDegrees(baseAngle),
                     (float) Math.toDegrees(kinematicsAngles[0]), // Lower arm angle
