@@ -88,7 +88,7 @@ public class SerialCommunication implements SerialPortEventListener{
         }
     }
 
-    public synchronized void serialEventOut(claw.Serial.Stepper motor, int steps){
+    public byte[] buildOutput(claw.Serial.Stepper motor, int steps) {
         byte[] stepsArray = ByteBuffer.allocate(4).order(ByteOrder.LITTLE_ENDIAN).putInt(steps).array();
 
         byte[] out = new byte[8];
@@ -101,6 +101,10 @@ public class SerialCommunication implements SerialPortEventListener{
         out[6] = stepsArray[3];
         out[7] = '>';
 
+        return out;
+    }
+
+    public synchronized void serialEventOut(byte[] out){
         try {
             output.write(out);
         } catch (IOException e) {

@@ -1,7 +1,7 @@
 package claw.Serial;
 
 public enum Stepper {
-    BASE(0), UPPER_ARM(1), FORE_ARM(2), GRIPPER(3);
+    BASE(0), LOWER_ARM(1), UPPER_ARM(2), GRIPPER(3);
 
     private final int value;
 

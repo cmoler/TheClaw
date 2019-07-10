@@ -10,7 +10,7 @@ public class LeapMain {
 
     public static void main(String[] args) {
         // claw.Leap Motion stuff
-        LeapListener listener = new LeapListener();
+        LeapListener listener = new LeapListener(null);
         Controller controller = new Controller();
 
         controller.addListener(listener);

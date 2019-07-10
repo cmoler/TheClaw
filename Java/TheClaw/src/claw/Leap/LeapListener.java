@@ -1,6 +1,11 @@
 package claw.Leap;
 
+import claw.Logit;
+import claw.Serial.MotorCommand;
+import claw.Serial.SerialThread;
+import claw.Serial.Stepper;
 import com.leapmotion.leap.*;
+import org.apache.logging.log4j.Level;
 
 /*
     Listener for the claw.Leap in order to grab values from it once it is connected
@@ -34,30 +39,52 @@ public class LeapListener extends Listener {
     // Value of 100 would mean final range of 200mm across
     static final float SCALE_CONSTANT = TOTAL_ARM_LEN;
 
+    Logit logger = Logit.getLogit("LeapListener");
     LeapPosition leapPosition;
+    SerialThread serialThread;
+    int frames = -1;
+    int frameDelay = 10;
 
+    public LeapListener(SerialThread serialThread) {
+        this.serialThread = serialThread;
+    }
 
     public void onInit(Controller controller) {
-        System.out.println("Listener Initialized");
+        logger.log(Level.INFO, "Listener Initialized");
     }
 
     public void onConnect(Controller controller) {
-        System.out.println("Connected");
+        logger.log(Level.INFO, "Connected");
         leapPosition = new LeapPosition();
     }
 
     public void onDisconnect(Controller controller) {
-        System.out.println("Disconnected");
+        logger.log(Level.INFO,"Disconnected");
     }
 
     public void onExit(Controller controller) {
-        System.out.println("Exited");
+        if (serialThread != null) {
+            int qSize = 0;
+            int prevQSize;
+            do {
+                prevQSize = qSize;
+                qSize = serialThread.getQueueSize();
+                if (qSize > 0 && qSize != prevQSize) {
+                    logger.log(Level.INFO, "Waiting for command Q to empty: " + qSize);
+                }
+            } while (qSize > 0);
+            logger.log(Level.INFO, "Closing serial thread...");
+            serialThread.close();
+        }
+        logger.log(Level.INFO, "Exited");
     }
 
     public void onFrame(Controller controller) {
-
-        // System.out.println("Frame available");
-
+        frames = (frames + 1) % frameDelay;
+        if (frames > 0) {
+            return;
+        }
+        // logger.log(Level.INFO, "Frame available");
         Frame frame = controller.frame();
         InteractionBox interactionBox = frame.interactionBox();
 
@@ -84,7 +111,16 @@ public class LeapListener extends Listener {
                     (float) Math.toDegrees(kinematicsAngles[1]), // Upper arm angle
                     gripperRatio);
 
-            //System.out.println(leapPosition.toString());
+            if (serialThread != null && !serialThread.isClosed()) {
+                MotorCommand[] cmds = {
+                        //serialThread.parseCommand(Stepper.BASE, leapPosition.baseAngle),
+                        // serialThread.parseCommand(Stepper.LOWER_ARM, leapPosition.lowerArmAngle),
+                        serialThread.parseCommand(Stepper.UPPER_ARM, leapPosition.upperArmAngle),
+                        serialThread.parseCommand(Stepper.GRIPPER, leapPosition.gripperRatio * 360)
+                };
+                serialThread.sendAtomicCommand(cmds);
+            }
+            logger.log(Level.DEBUG, leapPosition.toString());
         }
     }
 
@@ -137,7 +173,7 @@ public class LeapListener extends Listener {
         h = INNER_HYPOT_MIN;
       }
 
-      //System.out.print(String.format("Y: %f, xz: %f, h: %f ", y, xz, h));
+      //logger.log(Level.DEBUG, String.format("Y: %f, xz: %f, h: %f ", y, xz, h));
 
       // Lower arm angle is comprised of a1 (lower part using right triangle) and a2 (upper part using law of cosines)
       double a1 = Math.atan2(y, xz);
@@ -147,7 +183,8 @@ public class LeapListener extends Listener {
                       - ((UPPER_ARM_LEN + GRIPPER_LEN) * (UPPER_ARM_LEN + GRIPPER_LEN)))
                       / (2 * h * LOWER_ARM_LEN));
 
-      double lowerAngle = a1 + Math.abs(a2);
+      double lowerArmAngle = a1 + Math.abs(a2);
+      lowerArmAngle = Math.min(Math.max(lowerArmAngle, LOWER_ARM_ANGLE_MIN), LOWER_ARM_ANGLE_MAX);
 
       // Upper arm angle calc using law of cosines
       double upperArmAngle = Math.acos(
@@ -155,8 +192,9 @@ public class LeapListener extends Listener {
                       + ((UPPER_ARM_LEN + GRIPPER_LEN) * (UPPER_ARM_LEN + GRIPPER_LEN))
                       - (h * h))
                       / (2 * LOWER_ARM_LEN * (UPPER_ARM_LEN + GRIPPER_LEN)));
+      upperArmAngle = Math.min(Math.max(upperArmAngle, UPPER_ARM_ANGLE_MIN), UPPER_ARM_ANGLE_MAX);
 
-      double[] angles = { lowerAngle, Math.min(Math.max(upperArmAngle, UPPER_ARM_ANGLE_MIN), UPPER_ARM_ANGLE_MAX) };
+      double[] angles = { lowerArmAngle, upperArmAngle };
 
       return angles;
     }

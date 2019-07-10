@@ -45,6 +45,7 @@ const int MAX_STEP = 1024;
 const int MOTOR_BASE = 0;
 const int MOTOR_UPPER = 1;
 const int MOTOR_FORE = 2;
+const int MOTOR_GRIPPER = 3;
 
 const int PIN_MANUAL = 12;
 const int PINS_LEFT[] = { A0, A2, A4 };
@@ -272,8 +273,12 @@ void parseData() {
     }
     uint32_t numSteps = converter.integer;     // convert this part to an integer
 
-    cmd_t newCmd = { motor, numSteps };
-    addCommand(newCmd);
+    if (motor == MOTOR_BASE || motor == MOTOR_FORE || motor == MOTOR_UPPER) {
+      cmd_t newCmd = { motor, numSteps };
+      addCommand(newCmd);
+    } else if (motor == MOTOR_GRIPPER) {
+      gripperVal = gripperOpen + (gripperClose - gripperOpen) * ((float)numSteps / MAX_STEP);
+    }
     
     newData = false;
   }

@@ -18,18 +18,18 @@ public class SerialMain {
         logger.log(Level.INFO, "Press <Enter> at the prompt to quit.");
         boolean running = true;
         while (running && !serialThread.isClosed()) {
-            logger.log(Level.INFO, "What angle for forearm?");
+            logger.log(Level.INFO, "What angle for base?");
             Scanner input = new Scanner(System.in);
             String in = input.nextLine();
             if (in.isEmpty()) {
                 running = false;
             } else if (in.equalsIgnoreCase("burst")) {
                 for (int i = 0; i < 180; i += 1) {
-                    sendCommand(claw.Serial.Stepper.FORE_ARM, (float) i);
+                    sendCommand(claw.Serial.Stepper.BASE, (float) i);
                 }
             } else {
                 float angle = Float.parseFloat(in);
-                sendCommand(Stepper.FORE_ARM, angle);
+                sendCommand(Stepper.BASE, angle);
             }
         }
 
