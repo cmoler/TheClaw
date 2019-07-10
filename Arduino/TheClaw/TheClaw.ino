@@ -38,8 +38,8 @@ cmd_t cmdBuffer[cmdBufferCapacity];
 // Initialize I/O
 const int stepsPerRevolution = 2048;
 const int stepSize = 128;
+const int subStepSize = 10;
 const int speedNum = 15;
-const int delayNum = 1000;
 const int MAX_STEP = 1024;
 
 const int MOTOR_BASE = 0;
@@ -71,111 +71,157 @@ int gripperVal;
 int useManual;
 
 void setup() {
-    Serial.begin(9600);
+  Serial.begin(9600);
 
-    // pins
-    pinMode(PIN_GRIPPER, INPUT_PULLUP);
-    pinMode(PIN_MANUAL, INPUT_PULLUP);
-    pinMode(PIN_XOR_CTRL, OUTPUT);
-    for (int i = 0; i < 3; i++) {
-      pinMode(PINS_LEFT[i], INPUT_PULLUP);
-      pinMode(PINS_RIGHT[i], INPUT_PULLUP);
-    }
+  // pins
+  pinMode(PIN_GRIPPER, INPUT_PULLUP);
+  pinMode(PIN_MANUAL, INPUT_PULLUP);
+  pinMode(PIN_XOR_CTRL, OUTPUT);
+  for (int i = 0; i < 3; i++) {
+    pinMode(PINS_LEFT[i], INPUT_PULLUP);
+    pinMode(PINS_RIGHT[i], INPUT_PULLUP);
+  }
 
-    // motors
-    base.setSpeed(speedNum);
-    upper_arm.setSpeed(speedNum);
-    fore_arm.setSpeed(speedNum);
-    
-    steppers[0] = baseStepper;
-    motors[MOTOR_BASE] = base;
-    
-    steppers[1] = upperStepper;
-    motors[MOTOR_UPPER] = upper_arm;
-    
-    steppers[2] = foreStepper;
-    motors[MOTOR_FORE] = fore_arm;
+  // motors
+  base.setSpeed(speedNum);
+  upper_arm.setSpeed(speedNum);
+  fore_arm.setSpeed(speedNum);
+  
+  steppers[0] = baseStepper;
+  motors[MOTOR_BASE] = base;
+  
+  steppers[1] = upperStepper;
+  motors[MOTOR_UPPER] = upper_arm;
+  
+  steppers[2] = foreStepper;
+  motors[MOTOR_FORE] = fore_arm;
 
-    gripperServo.attach(3 );
-    
-    // state
-    useManual = false;
-    gripperVal = gripperOpen;
+  gripperServo.attach(3 );
+  
+  // state
+  useManual = false;
+  gripperVal = gripperOpen;
 }
 
 void loop() {
-    int manualIn = !digitalRead(PIN_MANUAL);
-    if (!manualIn && manualIn != useManual) {
-      // reset serial parsing
-      newData = false;
-      recvInProgress = false;
-      recvNdx = 0;
-    }
-    useManual = manualIn;
-    if (useManual) {
-      recvManual();
-    } else {
-      recvWithStartEndMarkers();
-      parseData();
-    }
-    moveStepper();
-    moveGripper();
+  int manualIn = !digitalRead(PIN_MANUAL);
+  if (!manualIn && manualIn != useManual) {
+    // reset serial parsing
+    newData = false;
+    recvInProgress = false;
+    recvNdx = 0;
+  }
+  useManual = manualIn;
+  if (useManual) {
+    recvManual();
+  } else {
+    recvWithStartEndMarkers();
+    parseData();
+  }
+  moveStepper();
+  moveGripper();
 }
 
 void moveGripper() {
-    gripperVal = min(max(gripperVal, gripperClose), gripperOpen);
-    gripperServo.write(gripperVal);
+  gripperVal = min(max(gripperVal, gripperClose), gripperOpen);
+  gripperServo.write(gripperVal);
 }
 
 void moveStepper() {
-    if (cmdBufferLen > 0) {
-      cmd_t cmd = removeCommand();
-      Serial.println((cmd.motor * 10000) + cmd.steps);
-      if (cmd.motor >= 0 && cmd.motor < 3) {
-        steppers[cmd.motor].targetAngle = ((float)cmd.steps / MAX_STEP) * 360;
-        Serial.println(steppers[cmd.motor].targetAngle);
-      }
+  if (cmdBufferLen > 0) {
+    cmd_t cmd = removeCommand();
+    Serial.println((cmd.motor * 10000) + cmd.steps);
+    if (cmd.motor >= 0 && cmd.motor < 3) {
+      steppers[cmd.motor].targetAngle = ((float)cmd.steps / MAX_STEP) * 360;
+      Serial.println(steppers[cmd.motor].targetAngle);
+    }
+  }
+  
+  float allSteps[] = { 0, 0, 0 };
+  int i;
+  for (i = 0; i < 3; i++) {
+    // copy and read
+    stepper_t s = steppers[i];
+
+    // normalize values
+    s.targetAngle = min(max(s.targetAngle, s.minAngle), s.maxAngle);
+
+    // calculate steps to take
+    float delta = (s.targetAngle - s.currentAngle);
+    int dir = signum(delta);
+    if (delta != 0 && abs(delta) > 1) {
+      int steps = min(max(abs((delta / 360) * stepsPerRevolution), 1), stepSize) * dir;
+      allSteps[i] = steps;
+      Serial.println(s.targetAngle);
+      Serial.println(s.currentAngle);
+      Serial.println(steps);
+      float change = steps * (360.0 / stepsPerRevolution);
+      s.currentAngle += change;
+      Serial.println(change);
+    } else {
+      allSteps[i] = 0;
     }
 
-    int xorVal = HIGH;
-    for (int i = 0; i < 3; i++) {
-      // copy and read
-      stepper_t s = steppers[i];
+    // update
+    steppers[i] = s;
+  }
 
-      // normalize values
-      s.targetAngle = min(max(s.targetAngle, s.minAngle), s.maxAngle);
+  // move
+  boolean cont = true;
+  while (cont) {
+    cont = false;
+    for (i = 0; i < 3; i++) {
+      if (i == MOTOR_FORE) {
+        Serial.print(i);
+        Serial.print("-");
+        Serial.println(allSteps[i]);
+      }
 
-      // move
-      
-      float delta = (s.targetAngle - s.currentAngle);
-      int dir = signum(delta);
-      if (delta != 0 && abs(delta) > 1) {
-        int steps = min(max(abs((delta / 360) * stepsPerRevolution), 1), stepSize) * dir;
-        motors[s.motor].step(steps);
-        Serial.println(s.targetAngle);
-        Serial.println(s.currentAngle);
-        Serial.println(steps);
-        float change = steps * (360.0 / stepsPerRevolution);
-        s.currentAngle += change;
-        Serial.println(change);
-      } else {
-        if (s.pinNum == 4) {
-          for (int j = 0; j < 4; j++) {
-            digitalWrite(s.pins[j], LOW);
-          }
-        } else if (s.pinNum == 2 && s.motor == MOTOR_FORE) {
-          for (int j = 0; j < 2; j++) {
-            digitalWrite(s.pins[j], LOW);
-          }
-          xorVal = LOW;
+      int dir = signum(allSteps[i]);
+      if (dir != 0) {
+        int stepCount = min(abs(allSteps[i]), subStepSize);
+        moveSingleStepper(i, stepCount * dir);
+        if (i == MOTOR_UPPER) {
+          moveSingleStepper(MOTOR_FORE, stepCount * dir);
         }
-        
+        allSteps[i] -= stepCount * dir;
+        cont = true;
       }
-
-      // update
-      steppers[i] = s;
     }
-    digitalWrite(PIN_XOR_CTRL, xorVal);
+  }
+}
+
+void moveSingleStepper(int motor, int delta) {
+  // copy and read
+  stepper_t s = steppers[motor];
+
+  // turn off other motors
+  for (int i = 0; i < 3; i++) {
+    if (i != motor) {
+      disableStepper(steppers[i]);
+    }
+  }
+
+  // move this motor
+  int dir = signum(delta);
+  if (abs(delta) > 0) {
+    motors[s.motor].step(delta);
+  }
+}
+
+void disableStepper(stepper_t s) {
+  int xorVal = HIGH;
+  if (s.pinNum == 4) {
+    for (int j = 0; j < 4; j++) {
+      digitalWrite(s.pins[j], LOW);
+    }
+  } else if (s.pinNum == 2 && s.motor == MOTOR_FORE) {
+    for (int j = 0; j < 2; j++) {
+      digitalWrite(s.pins[j], LOW);
+    }
+    xorVal = LOW;
+  }
+  digitalWrite(PIN_XOR_CTRL, xorVal);
 }
 
 int signum(float n) {
@@ -189,53 +235,53 @@ int signum(float n) {
 
 // Parse logic
 void recvWithStartEndMarkers() {
-    char startMarker = '<';
-    char endMarker = '>';
-    char rc;
+  char startMarker = '<';
+  char endMarker = '>';
+  char rc;
+  
+  while (Serial.available() > 0 && newData == false && !useManual) {
+    rc = Serial.read();
     
-    while (Serial.available() > 0 && newData == false && !useManual) {
-        rc = Serial.read();
-        
-        if (recvInProgress == true) {
-            if (rc != endMarker) {
-                receivedChars[recvNdx] = rc;
-                recvNdx++;
-                if (recvNdx >= numChars) {
-                    recvNdx = numChars - 1;
-                }
-            }
-            else {
-                receivedChars[recvNdx] = '\0'; // terminate the string
-                recvInProgress = false;
-                recvNdx = 0;
-                newData = true;
-            }
+    if (recvInProgress == true) {
+      if (rc != endMarker) {
+        receivedChars[recvNdx] = rc;
+        recvNdx++;
+        if (recvNdx >= numChars) {
+          recvNdx = numChars - 1;
         }
-        else if (rc == startMarker) {
-            recvInProgress = true;
-            recvNdx = 0;
-        }
+      }
+      else {
+        receivedChars[recvNdx] = '\0'; // terminate the string
+        recvInProgress = false;
+        recvNdx = 0;
+        newData = true;
+      }
     }
+    else if (rc == startMarker) {
+      recvInProgress = true;
+      recvNdx = 0;
+    }
+  }
 }
 
 void parseData() {
-    if (newData == true) {
-        // split the data into its parts:
-        // [m][,][b1][b2][b3][b4][\0]
-        
-        int motor = receivedChars[0];     // convert this part to an integer
+  if (newData == true) {
+    // split the data into its parts:
+    // [m][,][b1][b2][b3][b4][\0]
+    
+    int motor = receivedChars[0];     // convert this part to an integer
 
-        ArrayToInteger converter; //Create a converter
-        for(int i = 0; i < 4; i++){
-           converter.arr[i] = receivedChars[i + 2];
-        }
-        uint32_t numSteps = converter.integer;     // convert this part to an integer
-
-        cmd_t newCmd = { motor, numSteps };
-        addCommand(newCmd);
-        
-        newData = false;
+    ArrayToInteger converter; //Create a converter
+    for(int i = 0; i < 4; i++){
+       converter.arr[i] = receivedChars[i + 2];
     }
+    uint32_t numSteps = converter.integer;     // convert this part to an integer
+
+    cmd_t newCmd = { motor, numSteps };
+    addCommand(newCmd);
+    
+    newData = false;
+  }
 }
 
 // Manual logic
