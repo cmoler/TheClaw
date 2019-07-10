@@ -27,9 +27,9 @@ public class LeapListener extends Listener {
     static final float X_MAX = (float) (Math.cos(LOWER_ARM_ANGLE_MIN) * TOTAL_ARM_LEN); // 195.461
 
     // Inner hypotenuse minimum length calculated using law of cosines with min upper arm angle
-    static final double INNER_HYPOT_MIN = (LOWER_ARM_LEN * LOWER_ARM_LEN)
+    static final double INNER_HYPOT_MIN = Math.sqrt((LOWER_ARM_LEN * LOWER_ARM_LEN)
             + ((UPPER_ARM_LEN + GRIPPER_LEN) * (UPPER_ARM_LEN + GRIPPER_LEN))
-          - (2 * LOWER_ARM_LEN * (UPPER_ARM_LEN + GRIPPER_LEN) * Math.cos(UPPER_ARM_ANGLE_MIN)); // 45.441
+          - (2 * LOWER_ARM_LEN * (UPPER_ARM_LEN + GRIPPER_LEN) * Math.cos(UPPER_ARM_ANGLE_MIN))); // 6.741
 
     // Value of 100 would mean final range of 200mm across
     static final float SCALE_CONSTANT = TOTAL_ARM_LEN;
@@ -81,10 +81,10 @@ public class LeapListener extends Listener {
             leapPosition.updateAngles(
                     (float) Math.toDegrees(baseAngle),
                     (float) Math.toDegrees(kinematicsAngles[0]), // Lower arm angle
-                    (float) Math.toDegrees(kinematicsAngles[1]),
-                    gripperRatio); // Upper arm angle
+                    (float) Math.toDegrees(kinematicsAngles[1]), // Upper arm angle
+                    gripperRatio);
 
-            System.out.println(leapPosition.toString());
+            //System.out.println(leapPosition.toString());
         }
     }
 
@@ -93,7 +93,7 @@ public class LeapListener extends Listener {
       Vector normalized = interactionBox.normalizePoint(leapPoint, false);
 
       // Recenter origin from bottom back left to bottom center
-      normalized = normalized.plus(new Vector((float) 0.5, 0, (float) 0.5));
+      //normalized = normalized.plus(new Vector((float) 0.5, 0, (float) 0.5));
 
       // Scale up to robot space
       normalized = normalized.times(SCALE_CONSTANT);
@@ -137,13 +137,17 @@ public class LeapListener extends Listener {
         h = INNER_HYPOT_MIN;
       }
 
+      //System.out.print(String.format("Y: %f, xz: %f, h: %f ", y, xz, h));
+
       // Lower arm angle is comprised of a1 (lower part using right triangle) and a2 (upper part using law of cosines)
-      double a1 = Math.atan(y/xz);
+      double a1 = Math.atan2(y, xz);
 
       double a2 = Math.acos(
               ((h * h) + (LOWER_ARM_LEN * LOWER_ARM_LEN)
                       - ((UPPER_ARM_LEN + GRIPPER_LEN) * (UPPER_ARM_LEN + GRIPPER_LEN)))
                       / (2 * h * LOWER_ARM_LEN));
+
+      double lowerAngle = a1 + Math.abs(a2);
 
       // Upper arm angle calc using law of cosines
       double upperArmAngle = Math.acos(
@@ -152,7 +156,7 @@ public class LeapListener extends Listener {
                       - (h * h))
                       / (2 * LOWER_ARM_LEN * (UPPER_ARM_LEN + GRIPPER_LEN)));
 
-      double[] angles = {(a1 + a2), upperArmAngle};
+      double[] angles = { lowerAngle, Math.min(Math.max(upperArmAngle, UPPER_ARM_ANGLE_MIN), UPPER_ARM_ANGLE_MAX) };
 
       return angles;
     }
