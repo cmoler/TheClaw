@@ -99,7 +99,8 @@ public class LeapListener extends Listener {
             double baseAngle = calcBaseAngle(mappedPosition.getX(), mappedPosition.getZ());
 
             double xz = Math.hypot(mappedPosition.getX(), mappedPosition.getZ());
-            double[] kinematicsAngles = calcInverseKinematics(mappedPosition.getY(), xz);
+            double y = Math.max(mappedPosition.getY(), 0);
+            double[] kinematicsAngles = calcInverseKinematics(y, xz);
 
             // Get gripper close ratio, 0 for open hand - 1 for closed "pinch"
             float gripperRatio = hand.pinchStrength();
@@ -113,14 +114,14 @@ public class LeapListener extends Listener {
 
             if (serialThread != null && !serialThread.isClosed()) {
                 MotorCommand[] cmds = {
-                        //serialThread.parseCommand(Stepper.BASE, leapPosition.baseAngle),
-                        // serialThread.parseCommand(Stepper.LOWER_ARM, leapPosition.lowerArmAngle),
-                        serialThread.parseCommand(Stepper.UPPER_ARM, leapPosition.upperArmAngle),
-                        serialThread.parseCommand(Stepper.GRIPPER, leapPosition.gripperRatio * 360)
+                    //serialThread.parseCommand(Stepper.BASE, leapPosition.baseAngle),
+                    // serialThread.parseCommand(Stepper.LOWER_ARM, leapPosition.lowerArmAngle),
+                    serialThread.parseCommand(Stepper.UPPER_ARM, leapPosition.upperArmAngle),
+                    serialThread.parseCommand(Stepper.GRIPPER, leapPosition.gripperRatio * 360)
                 };
                 serialThread.sendAtomicCommand(cmds);
             }
-            logger.log(Level.DEBUG, leapPosition.toString());
+            // logger.log(Level.DEBUG, leapPosition.toString());
         }
     }
 
@@ -173,8 +174,6 @@ public class LeapListener extends Listener {
         h = INNER_HYPOT_MIN;
       }
 
-      //logger.log(Level.DEBUG, String.format("Y: %f, xz: %f, h: %f ", y, xz, h));
-
       // Lower arm angle is comprised of a1 (lower part using right triangle) and a2 (upper part using law of cosines)
       double a1 = Math.atan2(y, xz);
 
@@ -195,6 +194,8 @@ public class LeapListener extends Listener {
       upperArmAngle = Math.min(Math.max(upperArmAngle, UPPER_ARM_ANGLE_MIN), UPPER_ARM_ANGLE_MAX);
 
       double[] angles = { lowerArmAngle, upperArmAngle };
+
+      logger.log(Level.DEBUG, String.format("%f,%f,%f,%f,%f,%f,%f", xz, y, h, a1, a2, lowerArmAngle, upperArmAngle));
 
       return angles;
     }

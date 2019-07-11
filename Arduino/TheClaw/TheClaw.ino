@@ -37,7 +37,7 @@ cmd_t cmdBuffer[cmdBufferCapacity];
 
 // Initialize I/O
 const int stepsPerRevolution = 2048;
-const int stepSize = 128;
+const int stepSize = 32;
 const int subStepSize = 10;
 const int speedNum = 15;
 const int MAX_STEP = 1024;
