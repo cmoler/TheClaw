@@ -39,11 +39,19 @@ public class LeapListener extends Listener {
     // Value of 100 would mean final range of 200mm across
     static final float SCALE_CONSTANT = TOTAL_ARM_LEN;
 
+    static final float LERP_GRIPPER_FACTOR = 0.3f;
+    static final float LERP_GRIPPER_MIN_DIST = 0.05f;
+    static final float LERP_HAND_FACTOR = 0.5f;
+    static final float LERP_HAND_MIN_DIST = 5f;
+
     Logit logger = Logit.getLogit("LeapListener");
+    Vector mappedPosition = null;
+    float gripperRatio = -1;
     LeapPosition leapPosition;
     SerialThread serialThread;
     int frames = -1;
     int frameDelay = 10;
+    boolean hasNewValue = true;
 
     public LeapListener(SerialThread serialThread) {
         this.serialThread = serialThread;
@@ -81,47 +89,72 @@ public class LeapListener extends Listener {
 
     public void onFrame(Controller controller) {
         // logger.log(Level.INFO, "Frame available");
-        Frame frame = controller.frame();
-        InteractionBox interactionBox = frame.interactionBox();
-
-        if (!frame.hands().isEmpty()) {
-            Hand hand = frame.hands().get(0);
-            Vector palmPosition = hand.palmPosition();
-
-            // Scale from claw.Leap Space to Robo Arm Space
-            Vector mappedPosition = mapLeapToWorld(palmPosition, interactionBox);
-
-            // Calculate Angles
-            double baseAngle = calcBaseAngle(mappedPosition.getX(), mappedPosition.getZ());
-
-            double xz = Math.hypot(mappedPosition.getX(), mappedPosition.getZ());
-            double y = Math.max(mappedPosition.getY(), 0);
-            double[] kinematicsAngles = calcInverseKinematics(y, xz);
-
-            // Get gripper close ratio, 0 for open hand - 1 for closed "pinch"
-            float gripperRatio = hand.pinchStrength();
-
-            // Set all angles as degrees within the claw.Leap.LeapPosition to send to arduino
-            leapPosition.updateAngles(
-                    (float) Math.toDegrees(baseAngle),
-                    (float) Math.toDegrees(kinematicsAngles[0]), // Lower arm angle
-                    (float) Math.toDegrees(kinematicsAngles[1]), // Upper arm angle
-                    gripperRatio);
-
-
-            // logg
-            //
-            // er.log(Level.DEBUG, leapPosition.toString());
-        }
-
         frames = (frames + 1) % frameDelay;
         if (frames > 0) {
             return;
         }
+
+        Frame frame = controller.frame();
+        InteractionBox interactionBox = frame.interactionBox();
+
+        if (!frame.hands().isEmpty()) {
+            hasNewValue = false;
+            Hand hand = frame.hands().get(0);
+            Vector palmPosition = hand.palmPosition();
+
+            // Scale from claw.Leap Space to Robo Arm Space
+            Vector targetPosition = mapLeapToWorld(palmPosition, interactionBox);
+            if (mappedPosition == null) {
+                mappedPosition = targetPosition;
+            } else {
+                Vector newPos = lerpVector(mappedPosition, targetPosition, LERP_HAND_FACTOR, LERP_HAND_MIN_DIST);
+                if (newPos.minus(mappedPosition).magnitude() > LERP_HAND_MIN_DIST) {
+                    hasNewValue = true;
+                }
+                mappedPosition = newPos;
+            }
+
+            // Calculate Angles
+            // System.out.println("POS:" + mappedPosition.toString());
+            float z = Math.max(mappedPosition.getZ() * -1, 0);
+            double baseAngle = calcBaseAngle(mappedPosition.getX(), z);
+
+            double xz = Math.hypot(mappedPosition.getX(), z);
+            double y = Math.max(mappedPosition.getY(), 0);
+            double[] kinematicsAngles = calcInverseKinematics(y, xz);
+
+            // Get gripper close ratio, 0 for open hand - 1 for closed "pinch"
+            float targetGripperRatio = hand.pinchStrength();
+            if (gripperRatio < 0) {
+                gripperRatio = targetGripperRatio;
+            } else {
+                float newRatio = lerpFloat(gripperRatio, targetGripperRatio, LERP_GRIPPER_FACTOR, LERP_GRIPPER_MIN_DIST);
+                if (Math.abs(newRatio - gripperRatio) > LERP_GRIPPER_MIN_DIST) {
+                    hasNewValue = true;
+                }
+                gripperRatio = newRatio;
+            }
+
+            if (hasNewValue) {
+                // Set all angles as degrees within the claw.Leap.LeapPosition to send to arduino
+                leapPosition.updateAngles(
+                        (float) Math.toDegrees(baseAngle),
+                        (float) Math.toDegrees(kinematicsAngles[0]), // Lower arm angle
+                        (float) Math.toDegrees(kinematicsAngles[1]), // Upper arm angle
+                        gripperRatio);
+
+                logger.log(Level.DEBUG, leapPosition.toString());
+
+                sendCommands();
+            }
+        }
+    }
+
+    private void sendCommands() {
         if (serialThread != null && !serialThread.isClosed()) {
             MotorCommand[] cmds = {
-                    //serialThread.parseCommand(Stepper.BASE, leapPosition.baseAngle),
-                    // serialThread.parseCommand(Stepper.LOWER_ARM, leapPosition.lowerArmAngle),
+                    serialThread.parseCommand(Stepper.BASE, leapPosition.baseAngle),
+                    serialThread.parseCommand(Stepper.LOWER_ARM, leapPosition.lowerArmAngle),
                     serialThread.parseCommand(Stepper.UPPER_ARM, leapPosition.upperArmAngle),
                     serialThread.parseCommand(Stepper.GRIPPER, leapPosition.gripperRatio * 360)
             };
@@ -134,7 +167,7 @@ public class LeapListener extends Listener {
       Vector normalized = interactionBox.normalizePoint(leapPoint, false);
 
       // Recenter origin from bottom back left to bottom center
-      //normalized = normalized.plus(new Vector((float) 0.5, 0, (float) 0.5));
+      normalized = normalized.plus(new Vector((float) -0.5, 0, (float) -0.5));
 
       // Scale up to robot space
       normalized = normalized.times(SCALE_CONSTANT);
@@ -156,7 +189,7 @@ public class LeapListener extends Listener {
     }
 
     private double calcBaseAngle(float x, float z) {
-        double angle = Math.tan(z / x);
+        double angle = Math.atan2(z, x);
 
         // Restrict angles to min and max
         if (angle > BASE_ANGLE_MAX) {
@@ -199,8 +232,31 @@ public class LeapListener extends Listener {
 
       double[] angles = { lowerArmAngle, upperArmAngle };
 
-      logger.log(Level.DEBUG, String.format("%f,%f,%f,%f,%f,%f,%f", xz, y, h, a1, a2, lowerArmAngle, upperArmAngle));
+      // logger.log(Level.DEBUG, String.format("%f,%f,%f,%f,%f,%f,%f", xz, y, h, a1, a2, lowerArmAngle, upperArmAngle));
 
       return angles;
+    }
+
+    private Vector lerpVector(Vector vecStart, Vector vecEnd, float lerpFactor, float minDist) {
+        Vector vecOut;
+        Vector diff = vecEnd.minus(vecStart);
+        float dist = diff.magnitude();
+        if (dist > minDist) {
+            vecOut = vecStart.plus(diff.normalized().times(dist * lerpFactor));
+        } else {
+            vecOut = vecEnd;
+        }
+        return vecOut;
+    }
+
+    private float lerpFloat(float valStart, float valEnd, float lerpFactor, float minDist) {
+        float out;
+        float diff = valEnd - valStart;
+        if (diff > minDist) {
+            out = valStart + diff * lerpFactor;
+        } else {
+            out = valEnd;
+        }
+        return out;
     }
 }

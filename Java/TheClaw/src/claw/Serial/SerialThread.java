@@ -86,7 +86,7 @@ public class SerialThread extends Thread {
                 byte[] bytes = new byte[byteNum];
                 int b = 0;
                 for (MotorCommand cmd : atomicCmd.commands) {
-                    logger.log(Level.DEBUG, "Sending " + cmd.steps + " / " + MAX_STEP + " to " + cmd.motor);
+                    // logger.log(Level.DEBUG, "Sending " + cmd.steps + " / " + MAX_STEP + " to " + cmd.motor);
                     byte[] thisOut = this.serialCom.buildOutput(cmd.motor, cmd.steps);
                     for (int i = 0; i < thisOut.length; i++) {
                         bytes[b++] = thisOut[i];

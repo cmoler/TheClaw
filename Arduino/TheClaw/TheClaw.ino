@@ -23,21 +23,21 @@ union ArrayToInteger {
 };
 
 // Initialize buffers
-const uint8_t numChars = 32;
+const uint8_t numChars = 64;
 char receivedChars[numChars];
 
 byte recvNdx = 0;
 boolean recvInProgress = false;
 boolean newData = false;
 
-const uint8_t cmdBufferCapacity = 10;
+const uint8_t cmdBufferCapacity = 4;
 int cmdBufferLen = 0;
 int cmdBufferHead = 0;
 cmd_t cmdBuffer[cmdBufferCapacity];
 
 // Initialize I/O
 const int stepsPerRevolution = 2048;
-const int stepSize = 32;
+const int stepSize = 128;
 const int subStepSize = 10;
 const int speedNum = 15;
 const int MAX_STEP = 1024;
@@ -70,6 +70,8 @@ int gripperClose = 90;
 int gripperOpen = 160;
 int gripperVal;
 int useManual;
+int gripperTicks = 0;
+int gripperMaxTicks = 1000;
 
 void setup() {
   Serial.begin(9600);
@@ -121,6 +123,9 @@ void loop() {
   }
   moveStepper();
   moveGripper();
+  if (gripperTicks > 0) {
+    gripperTicks -= 1;
+  }
 }
 
 void moveGripper() {
@@ -134,7 +139,7 @@ void moveStepper() {
     Serial.println((cmd.motor * 10000) + cmd.steps);
     if (cmd.motor >= 0 && cmd.motor < 3) {
       steppers[cmd.motor].targetAngle = ((float)cmd.steps / MAX_STEP) * 360;
-      Serial.println(steppers[cmd.motor].targetAngle);
+      //Serial.println(steppers[cmd.motor].targetAngle);
     }
   }
   
@@ -153,13 +158,13 @@ void moveStepper() {
     if (delta != 0 && abs(delta) > 1) {
       int steps = min(max(abs((delta / 360) * stepsPerRevolution), 1), stepSize) * dir;
       allSteps[i] = steps;
-      Serial.println("_");
-      Serial.println(s.targetAngle);
-      Serial.println(s.currentAngle);
-      Serial.println(steps);
+      //Serial.println("_");
+      //Serial.println(s.targetAngle);
+      //Serial.println(s.currentAngle);
+      //Serial.println(steps);
       float change = steps * (360.0 / stepsPerRevolution);
       s.currentAngle += change;
-      Serial.println(change);
+      //Serial.println(change);
     } else {
       allSteps[i] = 0;
     }
@@ -296,10 +301,13 @@ void recvManual() {
       steppers[i].targetAngle = min(max(steppers[i].targetAngle, 0), 360);
     }
   }
-  if (!digitalRead(PIN_GRIPPER)) {
-    gripperVal = gripperClose;
-  } else {
-    gripperVal = gripperOpen;
+  if (!digitalRead(PIN_GRIPPER) && gripperTicks == 0) {
+    if (gripperVal == gripperOpen) {
+      gripperVal = gripperClose;
+    } else {
+      gripperVal = gripperOpen;
+    }
+    gripperTicks = gripperMaxTicks;
   }
 }
 
