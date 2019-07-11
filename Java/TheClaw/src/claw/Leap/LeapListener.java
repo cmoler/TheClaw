@@ -80,10 +80,6 @@ public class LeapListener extends Listener {
     }
 
     public void onFrame(Controller controller) {
-        frames = (frames + 1) % frameDelay;
-        if (frames > 0) {
-            return;
-        }
         // logger.log(Level.INFO, "Frame available");
         Frame frame = controller.frame();
         InteractionBox interactionBox = frame.interactionBox();
@@ -112,16 +108,24 @@ public class LeapListener extends Listener {
                     (float) Math.toDegrees(kinematicsAngles[1]), // Upper arm angle
                     gripperRatio);
 
-            if (serialThread != null && !serialThread.isClosed()) {
-                MotorCommand[] cmds = {
+
+            // logg
+            //
+            // er.log(Level.DEBUG, leapPosition.toString());
+        }
+
+        frames = (frames + 1) % frameDelay;
+        if (frames > 0) {
+            return;
+        }
+        if (serialThread != null && !serialThread.isClosed()) {
+            MotorCommand[] cmds = {
                     //serialThread.parseCommand(Stepper.BASE, leapPosition.baseAngle),
                     // serialThread.parseCommand(Stepper.LOWER_ARM, leapPosition.lowerArmAngle),
                     serialThread.parseCommand(Stepper.UPPER_ARM, leapPosition.upperArmAngle),
                     serialThread.parseCommand(Stepper.GRIPPER, leapPosition.gripperRatio * 360)
-                };
-                serialThread.sendAtomicCommand(cmds);
-            }
-            // logger.log(Level.DEBUG, leapPosition.toString());
+            };
+            serialThread.sendAtomicCommand(cmds);
         }
     }
 
