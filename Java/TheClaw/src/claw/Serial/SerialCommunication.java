@@ -91,15 +91,12 @@ public class SerialCommunication implements SerialPortEventListener{
     public byte[] buildOutput(claw.Serial.Stepper motor, int steps) {
         byte[] stepsArray = ByteBuffer.allocate(4).order(ByteOrder.LITTLE_ENDIAN).putInt(steps).array();
 
-        byte[] out = new byte[8];
-        out[0] = '<';
-        out[1] = (byte)motor.getValue();
-        out[2] = ',';
-        out[3] = stepsArray[0];
-        out[4] = stepsArray[1];
-        out[5] = stepsArray[2];
-        out[6] = stepsArray[3];
-        out[7] = '>';
+        byte[] out = new byte[5];
+        out[0] = (byte)motor.getValue();
+        out[1] = stepsArray[0];
+        out[2] = stepsArray[1];
+        out[3] = stepsArray[2];
+        out[4] = stepsArray[3];
 
         return out;
     }

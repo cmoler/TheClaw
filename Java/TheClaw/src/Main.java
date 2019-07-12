@@ -1,14 +1,9 @@
 import java.io.IOException;
-import java.util.Scanner;
-import java.util.UUID;
 
 import claw.Leap.LeapListener;
 import claw.Logit;
 import claw.Serial.SerialThread;
-import claw.Serial.Stepper;
 import com.leapmotion.leap.Controller;
-import org.apache.logging.log4j.Level;
-import org.apache.logging.log4j.ThreadContext;
 
 public class Main {
 

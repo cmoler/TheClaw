@@ -3,8 +3,6 @@ package claw.Serial;
 import claw.Logit;
 import org.apache.logging.log4j.Level;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
@@ -22,10 +20,11 @@ public class SerialThread extends Thread {
     };
 
     private static final int MAX_STEP = 1024;
+    private static final long TTL_MS = 60;
 
     public SerialThread() {
         this.serialCom = new SerialCommunication();
-        this.commandQ = new LinkedBlockingQueue<>();
+        this.commandQ = new LinkedBlockingQueue<>(5);
     }
 
     public SerialCommunication getSerialCom() {
@@ -52,7 +51,7 @@ public class SerialThread extends Thread {
     }
 
     public synchronized void sendAtomicCommand(MotorCommand ...commands) {
-        commandQ.add(new AtomicMotorCommand(commands));
+        commandQ.add(new AtomicMotorCommand(TTL_MS, commands));
     }
 
     private int getStepsFromAngle(float angle) {
@@ -82,21 +81,29 @@ public class SerialThread extends Thread {
         while (!this.closed) {
             if (commandQ.peek() != null) {
                 AtomicMotorCommand atomicCmd = commandQ.remove();
-                int byteNum = atomicCmd.commands.length * 8;
-                byte[] bytes = new byte[byteNum];
-                int b = 0;
-                for (MotorCommand cmd : atomicCmd.commands) {
-                    // logger.log(Level.DEBUG, "Sending " + cmd.steps + " / " + MAX_STEP + " to " + cmd.motor);
-                    byte[] thisOut = this.serialCom.buildOutput(cmd.motor, cmd.steps);
-                    for (int i = 0; i < thisOut.length; i++) {
-                        bytes[b++] = thisOut[i];
+                if (atomicCmd.isFresh()) {
+                    int dataLen = 5;
+                    int dataNum = atomicCmd.commands.length * dataLen;
+                    int byteNum = 3 + dataNum;
+                    byte[] bytes = new byte[byteNum];
+                    int b = 0;
+                    bytes[b++] = '<';
+                    bytes[b++] = (byte)(dataNum / dataLen);
+                    // logger.log(Level.DEBUG,"-");
+                    for (MotorCommand cmd : atomicCmd.commands) {
+                        // logger.log(Level.DEBUG, "Sending " + cmd.steps + " / " + MAX_STEP + " to " + cmd.motor);
+                        byte[] thisOut = this.serialCom.buildOutput(cmd.motor, cmd.steps);
+                        for (int i = 0; i < thisOut.length; i++) {
+                            bytes[b++] = thisOut[i];
+                        }
                     }
-                }
-                this.serialCom.serialEventOut(bytes);
-                try {
-                    Thread.sleep(10);
-                } catch (InterruptedException e) {
-                    logger.log(Level.ERROR, e.toString());
+                    bytes[b] = '>';
+                    this.serialCom.serialEventOut(bytes);
+                    try {
+                        Thread.sleep(10);
+                    } catch (InterruptedException e) {
+                        logger.log(Level.ERROR, e.toString());
+                    }
                 }
             }
         }

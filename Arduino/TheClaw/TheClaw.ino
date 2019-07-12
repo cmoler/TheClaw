@@ -23,14 +23,14 @@ union ArrayToInteger {
 };
 
 // Initialize buffers
-const uint8_t numChars = 64;
+const uint8_t numChars = 32;
 char receivedChars[numChars];
 
 byte recvNdx = 0;
 boolean recvInProgress = false;
 boolean newData = false;
 
-const uint8_t cmdBufferCapacity = 4;
+const uint8_t cmdBufferCapacity = 20;
 int cmdBufferLen = 0;
 int cmdBufferHead = 0;
 cmd_t cmdBuffer[cmdBufferCapacity];
@@ -99,7 +99,7 @@ void setup() {
   steppers[2] = foreStepper;
   motors[MOTOR_FORE] = fore_arm;
 
-  gripperServo.attach(3 );
+  gripperServo.attach(3);
   
   // state
   useManual = false;
@@ -107,6 +107,7 @@ void setup() {
 }
 
 void loop() {
+  // Serial.println("hello");
   int manualIn = !digitalRead(PIN_MANUAL);
   if (!manualIn && manualIn != useManual) {
     // reset serial parsing
@@ -136,10 +137,12 @@ void moveGripper() {
 void moveStepper() {
   if (cmdBufferLen > 0) {
     cmd_t cmd = removeCommand();
-    Serial.println((cmd.motor * 10000) + cmd.steps);
+    /*Serial.print(cmd.motor);
+    Serial.print(", ");
+    Serial.println(cmd.steps);*/
     if (cmd.motor >= 0 && cmd.motor < 3) {
       steppers[cmd.motor].targetAngle = ((float)cmd.steps / MAX_STEP) * 360;
-      //Serial.println(steppers[cmd.motor].targetAngle);
+      // Serial.println(steppers[cmd.motor].targetAngle);
     }
   }
   
@@ -171,6 +174,7 @@ void moveStepper() {
 
     // update
     steppers[i] = s;
+    
   }
 
   // move
@@ -183,7 +187,7 @@ void moveStepper() {
         int stepCount = min(abs(allSteps[i]), subStepSize);
         moveSingleStepper(i, stepCount * dir);
         if (i == MOTOR_UPPER) {
-          moveSingleStepper(MOTOR_FORE, stepCount * dir);
+          moveSingleStepper(MOTOR_FORE, (stepCount * dir) + 1);
         }
         allSteps[i] -= stepCount * dir;
         cont = true;
@@ -268,21 +272,25 @@ void recvWithStartEndMarkers() {
 void parseData() {
   if (newData == true) {
     // split the data into its parts:
-    // [m][,][b1][b2][b3][b4][\0]
-    
-    int motor = receivedChars[0];     // convert this part to an integer
+    // [4] [m][b1][b2][b3][b4] [m][b1][b2][b3][b4] [m][b1][b2][b3][b4] [m][b1][b2][b3][b4] [\0]
+    int cmdNum = receivedChars[0];
 
-    ArrayToInteger converter; //Create a converter
-    for(int i = 0; i < 4; i++){
-       converter.arr[i] = receivedChars[i + 2];
-    }
-    uint32_t numSteps = converter.integer;     // convert this part to an integer
-
-    if (motor == MOTOR_BASE || motor == MOTOR_FORE || motor == MOTOR_UPPER) {
-      cmd_t newCmd = { motor, numSteps };
-      addCommand(newCmd);
-    } else if (motor == MOTOR_GRIPPER) {
-      gripperVal = gripperOpen + (gripperClose - gripperOpen) * ((float)numSteps / MAX_STEP);
+    for (int i = 0; i < cmdNum; i++) {
+      int offset = 1 + (i * 5);
+      int motor = receivedChars[offset]; // convert this part to an integer
+  
+      ArrayToInteger converter; //Create a converter
+      for(int j = 0; j < 4; j++){
+         converter.arr[j] = receivedChars[offset + 1 + j];
+      }
+      uint32_t numSteps = converter.integer;     // convert this part to an integer
+  
+      if (motor == MOTOR_BASE || motor == MOTOR_FORE || motor == MOTOR_UPPER) {
+        cmd_t newCmd = { motor, numSteps };
+        addCommand(newCmd);
+      } else if (motor == MOTOR_GRIPPER) {
+        gripperVal = gripperOpen + (gripperClose - gripperOpen) * ((float)numSteps / MAX_STEP);
+      }
     }
     
     newData = false;
@@ -317,6 +325,7 @@ void addCommand(cmd_t cmd) {
   if (cmdBufferLen == cmdBufferCapacity) {
     removeCommand();
   }
+  
   int tail = getBufferIndex(cmdBufferLen);
   cmdBuffer[tail] = cmd;
   cmdBufferLen += 1;
@@ -325,7 +334,7 @@ void addCommand(cmd_t cmd) {
 cmd_t removeCommand() {
   if (cmdBufferLen > 0) {
     cmd_t val = cmdBuffer[cmdBufferHead];
-    cmdBufferHead = getBufferIndex(cmdBufferHead + 1);
+    cmdBufferHead = getBufferIndex(1);
     cmdBufferLen -= 1;
     return val;
   }
@@ -334,8 +343,8 @@ cmd_t removeCommand() {
 int getBufferIndex(int n) {
   int i = cmdBufferHead + n;
   while (i < 0) {
-    cmdBufferHead += cmdBufferLen;
+    i += cmdBufferCapacity;
   }
-  return i % cmdBufferLen;
+  return i % cmdBufferCapacity;
 }
   
