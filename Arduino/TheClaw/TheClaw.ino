@@ -41,6 +41,8 @@ const int stepSize = 128;
 const int subStepSize = 10;
 const int speedNum = 15;
 const int MAX_STEP = 1024;
+const float LERP_FACTOR = 0.4;
+const float LERP_MIN_DIST = 1;
 
 const int MOTOR_BASE = 0;
 const int MOTOR_UPPER = 1;
@@ -136,33 +138,37 @@ void moveGripper() {
 
 void moveStepper() {
   if (cmdBufferLen > 0) {
-    Serial.println("-");
     while (cmdBufferLen > 0) {
+      //Serial.print(".");
       cmd_t cmd = removeCommand();
-      Serial.print(cmd.motor);
-      Serial.print(", ");
-      Serial.println(cmd.steps);
       if (cmd.motor >= 0 && cmd.motor < 3) {
         steppers[cmd.motor].targetAngle = ((float)cmd.steps / MAX_STEP) * 360;
-        // Serial.println(steppers[cmd.motor].targetAngle);
       }
     }
+    //Serial.println("");
   }
 
-  
+  Serial.print("AC:");
+  for (int a = 0; a < 3; a++) {
+    Serial.print(steppers[a].currentAngle);
+    if (a != 2) {
+      Serial.print(",");
+    }
+  }
+  Serial.println();
   float allSteps[] = { 0, 0, 0 };
   int i;
   for (i = 0; i < 3; i++) {
     // copy and read
     stepper_t s = steppers[i];
 
-    // normalize values
+    // normalize and lerp values
     s.targetAngle = min(max(s.targetAngle, s.minAngle), s.maxAngle);
-
+    float newAngle = lerpStepper(s, LERP_FACTOR, LERP_MIN_DIST);
     // calculate steps to take
-    float delta = (s.targetAngle - s.currentAngle);
+    float delta = (newAngle - s.currentAngle);
     int dir = signum(delta);
-    if (delta != 0 && abs(delta) > 1) {
+    if (delta != 0 && abs(delta) > 0) {
       int steps = min(max(abs((delta / 360) * stepsPerRevolution), 1), stepSize) * dir;
       allSteps[i] = steps;
       //Serial.println("_");
@@ -178,7 +184,6 @@ void moveStepper() {
 
     // update
     steppers[i] = s;
-    
   }
 
   // move
@@ -191,7 +196,7 @@ void moveStepper() {
         int stepCount = min(abs(allSteps[i]), subStepSize);
         moveSingleStepper(i, stepCount * dir);
         if (i == MOTOR_UPPER) {
-          moveSingleStepper(MOTOR_FORE, (stepCount * dir) + 1);
+          moveSingleStepper(MOTOR_FORE, (stepCount * dir));
         }
         allSteps[i] -= stepCount * dir;
         cont = true;
@@ -321,6 +326,17 @@ void recvManual() {
     }
     gripperTicks = gripperMaxTicks;
   }
+}
+
+float lerpStepper(stepper_t s, float lerpFactor, float minDist) {
+  float newAngle = s.currentAngle;
+  float dist = s.targetAngle - s.currentAngle;
+  if (abs(dist) <= minDist) {
+    newAngle = s.targetAngle;
+  } else {
+    newAngle = s.currentAngle + dist * lerpFactor;
+  }
+  return newAngle;
 }
 
 // Buffer logic

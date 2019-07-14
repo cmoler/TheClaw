@@ -59,7 +59,9 @@ public class SerialThread extends Thread {
         while (boundedAngle < 0) {
             boundedAngle += 360f;
         }
-        boundedAngle = boundedAngle % 360;
+        if (boundedAngle > 360) {
+            boundedAngle = boundedAngle % 360;
+        }
         return Math.round((boundedAngle / 360f) * (float)(MAX_STEP));
     }
 
