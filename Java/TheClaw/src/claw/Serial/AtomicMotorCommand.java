@@ -13,6 +13,8 @@ public class AtomicMotorCommand {
     }
 
     public boolean isFresh() {
-        return (System.currentTimeMillis() - this.startTimeMs) <= ttlMs;
+        return this.getFreshness() <= ttlMs;
     }
+
+    public long getFreshness() { return (System.currentTimeMillis() - this.startTimeMs); }
 }

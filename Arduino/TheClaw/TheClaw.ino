@@ -136,15 +136,19 @@ void moveGripper() {
 
 void moveStepper() {
   if (cmdBufferLen > 0) {
-    cmd_t cmd = removeCommand();
-    /*Serial.print(cmd.motor);
-    Serial.print(", ");
-    Serial.println(cmd.steps);*/
-    if (cmd.motor >= 0 && cmd.motor < 3) {
-      steppers[cmd.motor].targetAngle = ((float)cmd.steps / MAX_STEP) * 360;
-      // Serial.println(steppers[cmd.motor].targetAngle);
+    Serial.println("-");
+    while (cmdBufferLen > 0) {
+      cmd_t cmd = removeCommand();
+      Serial.print(cmd.motor);
+      Serial.print(", ");
+      Serial.println(cmd.steps);
+      if (cmd.motor >= 0 && cmd.motor < 3) {
+        steppers[cmd.motor].targetAngle = ((float)cmd.steps / MAX_STEP) * 360;
+        // Serial.println(steppers[cmd.motor].targetAngle);
+      }
     }
   }
+
   
   float allSteps[] = { 0, 0, 0 };
   int i;

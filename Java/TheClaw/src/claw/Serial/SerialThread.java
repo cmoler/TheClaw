@@ -20,7 +20,7 @@ public class SerialThread extends Thread {
     };
 
     private static final int MAX_STEP = 1024;
-    private static final long TTL_MS = 60;
+    private static final long TTL_MS = 10;
 
     public SerialThread() {
         this.serialCom = new SerialCommunication();
@@ -89,9 +89,7 @@ public class SerialThread extends Thread {
                     int b = 0;
                     bytes[b++] = '<';
                     bytes[b++] = (byte)(dataNum / dataLen);
-                    // logger.log(Level.DEBUG,"-");
                     for (MotorCommand cmd : atomicCmd.commands) {
-                        // logger.log(Level.DEBUG, "Sending " + cmd.steps + " / " + MAX_STEP + " to " + cmd.motor);
                         byte[] thisOut = this.serialCom.buildOutput(cmd.motor, cmd.steps);
                         for (int i = 0; i < thisOut.length; i++) {
                             bytes[b++] = thisOut[i];

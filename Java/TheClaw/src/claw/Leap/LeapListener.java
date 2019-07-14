@@ -55,7 +55,7 @@ public class LeapListener extends Listener {
     LeapPosition leapPosition;
     SerialThread serialThread;
     int frames = -1;
-    int frameDelay = 10;
+    int frameDelay = 20;
     boolean hasNewValue = true;
 
     public LeapListener(SerialThread serialThread) {
@@ -94,10 +94,6 @@ public class LeapListener extends Listener {
 
     public void onFrame(Controller controller) {
         // logger.log(Level.INFO, "Frame available");
-        frames = (frames + 1) % frameDelay;
-        if (frames > 0) {
-            return;
-        }
 
         Frame frame = controller.frame();
         InteractionBox interactionBox = frame.interactionBox();
@@ -153,18 +149,21 @@ public class LeapListener extends Listener {
                 gripperRatio = newRatio;
             }
 
-            if (hasNewValue) {
-                // Set all angles as degrees within the claw.Leap.LeapPosition to send to arduino
-                leapPosition.updateAngles(
-                        (float) Math.toDegrees(baseAngle),
-                        (float) Math.toDegrees(kinematicsAngles[0]), // Lower arm angle
-                        (float) Math.toDegrees(kinematicsAngles[1]), // Upper arm angle
-                        gripperRatio);
+            leapPosition.updateAngles(
+                    (float) Math.toDegrees(baseAngle),
+                    (float) Math.toDegrees(kinematicsAngles[0]), // Lower arm angle
+                    (float) Math.toDegrees(kinematicsAngles[1]), // Upper arm angle
+                    gripperRatio);
+        }
 
-                // logger.log(Level.DEBUG, leapPosition.toString());
+        frames = (frames + 1) % frameDelay;
+        if (frames > 0) {
+            return;
+        }
 
-                sendCommands();
-            }
+        if (hasNewValue) {
+            logger.log(Level.DEBUG, leapPosition.toString());
+            sendCommands();
         }
     }
 
@@ -185,7 +184,7 @@ public class LeapListener extends Listener {
       Vector normalized = interactionBox.normalizePoint(leapPoint, false);
 
       // Recenter origin
-      normalized = normalized.plus(new Vector((float) -0.5, (float)-0.25, (float) -0.25));
+      normalized = normalized.plus(new Vector((float) -0.5, (float)-0.5, (float) -0.25));
 
       // Scale up to robot space
       normalized = normalized.times(SCALE_CONSTANT);
